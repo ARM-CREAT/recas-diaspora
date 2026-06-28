@@ -835,14 +835,14 @@ function renderAccueil(){
 function renderAssociation(){
   document.getElementById('mission-content') && (document.getElementById('mission-content').textContent=state.cfg.mission);
   document.getElementById('bureau-count').textContent=state.bureau.length+' membres';
-  document.getElementById('bureau-list').innerHTML=state.bureau.map(m=>`
+  document.getElementById('bureau-list').innerHTML=infList('bur',state.bureau).map(m=>`
     <div class="card"><div class="member">
       <div class="avatar">${initials(m.nom)}</div>
       <div><div style="font-weight:700;color:var(--vert-d);font-size:17px;font-family:var(--display)">${esc(m.nom)}</div>
       <div style="color:var(--rouge);font-weight:600">${esc(m.fonc)}</div>
       ${m.lieu?`<div class="muted" style="font-size:13px">${esc(m.lieu)}</div>`:''}</div></div>
       ${m.tel?`<hr class="s"/><div>📞 <a href="tel:${esc(m.tel)}">${esc(m.tel)}</a></div>`:''}
-    </div>`).join('');
+    </div>`).join('')+infMore('bur',state.bureau.length,false);
 }
 
 function renderCotisationPage(){
@@ -864,11 +864,11 @@ function renderMembres(){
     if(!q) return true;
     return [m.num,m.nom,m.prenom,m.pays,m.ville].join(' ').toLowerCase().includes(q);
   });
-  document.querySelector('#memTable tbody').innerHTML=list.map(m=>{
+  document.querySelector('#memTable tbody').innerHTML=(infList('mem',list).map(m=>{
     const j=aJour(m.num); const c=derniereCotis(m.num);
     return `<tr><td><strong>${esc(m.num)}</strong></td><td>${esc((m.prenom||'')+' '+m.nom)}</td><td>${esc(m.pays||'')}</td><td>${esc(m.ville||'')}</td>
     <td><span class="pill ${j?'ok':'late'}">${j?'À jour':'En retard'}</span></td><td>${c?fmtDate(c.date):'—'}</td></tr>`;
-  }).join('')||'<tr><td colspan="6" class="muted center">Aucun membre</td></tr>';
+  }).join('')||'<tr><td colspan="6" class="muted center">Aucun membre</td></tr>')+infMore('mem',list.length,true,6);
 }
 
 function renderProcedure(){
@@ -883,24 +883,26 @@ function renderTransparence(){
   document.getElementById('t-solde').textContent=eur(soldeCaisse());
   document.getElementById('t-recu').textContent=eur(cotisRecues());
   document.getElementById('t-rap').textContent=state.rapatriements.length;
-  document.querySelector('#rapTable tbody').innerHTML=state.rapatriements.length?[...state.rapatriements].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(r=>`
+  const rapL=[...state.rapatriements].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  document.querySelector('#rapTable tbody').innerHTML=(rapL.length?infList('rap',rapL).map(r=>`
     <tr><td>${fmtDate(r.date)}</td><td>${esc(r.membre||'—')}</td><td>${esc(r.pays||'')}</td><td><strong>${eur(r.montant)}</strong></td></tr>`).join('')
-    :'<tr><td colspan="4" class="muted center">Aucun rapatriement enregistré</td></tr>';
+    :'<tr><td colspan="4" class="muted center">Aucun rapatriement enregistré</td></tr>')+infMore('rap',rapL.length,true,4);
 }
 
 function renderAnnonces(){
-  document.getElementById('annonces-list').innerHTML=state.annonces.length?[...state.annonces].sort((a,b)=>b.date-a.date).map(a=>`
+  const annL=[...state.annonces].sort((a,b)=>b.date-a.date);
+  document.getElementById('annonces-list').innerHTML=(annL.length?infList('ann',annL).map(a=>`
     <div class="card hover"><span class="tag ${a.type==='Hommage'?'t':a.type==='Urgent'?'r':a.type==='Convocation'?'j':'v'}">${esc(a.type)}</span>
     <h4 style="margin-top:8px">${esc(a.titre)}</h4><div class="meta">${fmtDate(a.date)}</div><div>${nl2br(a.txt||'')}</div></div>`).join('')
-    :'<p class="muted">Aucune annonce publiée.</p>';
+    :'<p class="muted">Aucune annonce publiée.</p>')+infMore('ann',annL.length,false);
 }
 function renderEvt(){
   const list=[...state.evt].sort((a,b)=>new Date(a.date||0)-new Date(b.date||0));
-  document.getElementById('evt-list').innerHTML=list.length?list.map(e=>{
+  document.getElementById('evt-list').innerHTML=(list.length?infList('evt',list).map(e=>{
     const past=e.date&&new Date(e.date)<new Date();
     return `<div class="card hover" ${past?'style="opacity:.7"':''}><span class="tag ${past?'r':'j'}">${past?'Passé':esc(e.type||'Événement')}</span>
     <h4 style="margin-top:8px">${esc(e.titre)}</h4><div class="meta">🕒 ${fmtDT(e.date)}${e.lieu?' · 📍 '+esc(e.lieu):''}</div><div>${nl2br(e.txt||'')}</div></div>`;
-  }).join(''):'<p class="muted">Aucun événement programmé.</p>';
+  }).join(''):'<p class="muted">Aucun événement programmé.</p>')+infMore('evt',list.length,false);
 }
 function renderContact(){
   document.getElementById('ct-adr').textContent=state.cfg.adresse;
@@ -909,10 +911,33 @@ function renderContact(){
   document.getElementById('foot-contact').innerHTML=`${esc(state.cfg.adresse)}<br><a href="tel:${esc(state.cfg.tel)}" style="color:#cfe3d4">${esc(state.cfg.tel)}</a><br>${esc(state.cfg.mail)}`;
 }
 
+/* ==================== DÉFILEMENT INFINI ==================== */
+const INF_BATCH = 12;
+const infShown = {};
+function infList(key, arr){ if(infShown[key]==null) infShown[key]=INF_BATCH; return arr.slice(0, infShown[key]); }
+function infMore(key, total, asRow, cols){
+  if((infShown[key]||INF_BATCH) >= total) return '';
+  return asRow
+    ? `<tr><td colspan="${cols}" style="padding:0;border:0"><div class="inf-sentinel" data-key="${key}" style="height:1px"></div></td></tr>`
+    : `<div class="inf-sentinel" data-key="${key}" style="height:1px"></div>`;
+}
+let infObs=null;
+function infObserve(){
+  if(!infObs){
+    infObs=new IntersectionObserver(function(es){
+      var changed=false;
+      es.forEach(function(e){ if(e.isIntersecting){ var k=e.target.dataset.key; infShown[k]=(infShown[k]||INF_BATCH)+INF_BATCH; infObs.unobserve(e.target); changed=true; } });
+      if(changed) renderAll();
+    }, { rootMargin:'250px' });
+  }
+  document.querySelectorAll('.inf-sentinel').forEach(function(s){ infObs.observe(s); });
+}
+
 function renderAll(){
   renderAccueil(); renderAssociation(); renderCotisationPage(); renderMembres();
   renderProcedure(); renderTransparence(); renderAnnonces(); renderEvt(); renderContact();
   if(state.auth.logged) renderAdmin();
+  infObserve();
 }
 
 /* ==================== ACTIONS PUBLIQUES ==================== */
@@ -1006,37 +1031,38 @@ function renderAdmin(){
   document.getElementById('aKpiRetard').textContent=state.membres.length-jour;
   document.getElementById('aKpiSolde').textContent=eur(soldeCaisse());
   // membres
-  document.querySelector('#aMemTable tbody').innerHTML=state.membres.map(m=>{
+  document.querySelector('#aMemTable tbody').innerHTML=(infList('amem',state.membres).map(m=>{
     const j=aJour(m.num);
     return `<tr><td><strong>${esc(m.num)}</strong></td><td>${esc((m.prenom||'')+' '+m.nom)}</td><td>${esc(m.tel||'')}</td><td>${esc(m.pays||'')}</td>
     <td><span class="pill ${j?'ok':'late'}">${j?'À jour':'En retard'}</span></td>
     <td><button class="btn sm warn" onclick="suppMembre('${m.num}')">🗑️</button></td></tr>`;
-  }).join('')||'<tr><td colspan="6" class="muted center">Aucun membre</td></tr>';
+  }).join('')||'<tr><td colspan="6" class="muted center">Aucun membre</td></tr>')+infMore('amem',state.membres.length,true,6);
   // cotisations
-  document.querySelector('#aCotTable tbody').innerHTML=[...state.cotis].sort((a,b)=>b.date-a.date).map(c=>`
+  const cotL=[...state.cotis].sort((a,b)=>b.date-a.date);
+  document.querySelector('#aCotTable tbody').innerHTML=(infList('acot',cotL).map(c=>`
     <tr><td>${fmtDate(c.date)}</td><td>${esc(c.nom)}${c.num?' · '+esc(c.num):''}</td><td><strong>${eur(c.montant)}</strong></td><td>${esc(c.moyen)}</td>
     <td><span class="pill ${c.statut==='Confirmée'?'ok':'wait'}">${esc(c.statut)}</span></td>
     <td>${c.statut!=='Confirmée'?`<button class="btn sm" onclick="confirmerCotis('${c.id}')">✓ Confirmer</button>`:''} <button class="btn sm warn" onclick="suppCotis('${c.id}')">🗑️</button></td></tr>`).join('')
-    ||'<tr><td colspan="6" class="muted center">Aucune cotisation</td></tr>';
+    ||'<tr><td colspan="6" class="muted center">Aucune cotisation</td></tr>')+infMore('acot',cotL.length,true,6);
   // rapatriements
-  document.getElementById('aRapList').innerHTML=state.rapatriements.map(r=>`
+  document.getElementById('aRapList').innerHTML=(infList('arap',state.rapatriements).map(r=>`
     <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;display:flex;gap:10px;align-items:center">
     <div style="flex:1"><strong>${esc(r.membre||'—')}</strong> · ${esc(r.pays||'')}<br><span class="muted" style="font-size:12px">${fmtDate(r.date)} — ${eur(r.montant)}</span></div>
-    <button class="btn sm warn" onclick="suppRap('${r.id}')">🗑️</button></div>`).join('')||'<p class="muted">Aucun rapatriement enregistré.</p>';
+    <button class="btn sm warn" onclick="suppRap('${r.id}')">🗑️</button></div>`).join('')||'<p class="muted">Aucun rapatriement enregistré.</p>')+infMore('arap',state.rapatriements.length,false);
   // annonces
-  document.getElementById('aAnList').innerHTML=state.annonces.map(a=>`
+  document.getElementById('aAnList').innerHTML=(infList('aann',state.annonces).map(a=>`
     <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px"><span class="tag v">${esc(a.type)}</span> <strong>${esc(a.titre)}</strong>
-    <div class="muted" style="font-size:12px">${fmtDate(a.date)}</div><button class="btn sm warn" onclick="suppAnnonce('${a.id}')" style="margin-top:6px">🗑️</button></div>`).join('')||'<p class="muted">Aucune annonce.</p>';
+    <div class="muted" style="font-size:12px">${fmtDate(a.date)}</div><button class="btn sm warn" onclick="suppAnnonce('${a.id}')" style="margin-top:6px">🗑️</button></div>`).join('')||'<p class="muted">Aucune annonce.</p>')+infMore('aann',state.annonces.length,false);
   // evt
-  document.getElementById('aEvtList').innerHTML=state.evt.map(e=>`
+  document.getElementById('aEvtList').innerHTML=(infList('aevt',state.evt).map(e=>`
     <div style="padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px"><span class="tag j">${esc(e.type||'')}</span> <strong>${esc(e.titre)}</strong>
-    <div class="muted" style="font-size:12px">${fmtDT(e.date)} · ${esc(e.lieu||'')}</div><button class="btn sm warn" onclick="suppEvt('${e.id}')" style="margin-top:6px">🗑️</button></div>`).join('')||'<p class="muted">Aucun événement.</p>';
+    <div class="muted" style="font-size:12px">${fmtDT(e.date)} · ${esc(e.lieu||'')}</div><button class="btn sm warn" onclick="suppEvt('${e.id}')" style="margin-top:6px">🗑️</button></div>`).join('')||'<p class="muted">Aucun événement.</p>')+infMore('aevt',state.evt.length,false);
   // bureau
-  document.getElementById('aBureauList').innerHTML=state.bureau.map(m=>`
+  document.getElementById('aBureauList').innerHTML=infList('abur',state.bureau).map(m=>`
     <div style="display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px">
     <div class="avatar" style="width:44px;height:44px;font-size:15px">${initials(m.nom)}</div>
     <div style="flex:1"><strong>${esc(m.nom)}</strong> — ${esc(m.fonc)}<br><span class="muted" style="font-size:12px">${esc(m.tel||'')} ${esc(m.lieu||'')}</span></div>
-    <button class="btn sm alt" onclick="editBureau('${m.id}')">✏️</button><button class="btn sm warn" onclick="suppBureau('${m.id}')">🗑️</button></div>`).join('');
+    <button class="btn sm alt" onclick="editBureau('${m.id}')">✏️</button><button class="btn sm warn" onclick="suppBureau('${m.id}')">🗑️</button></div>`).join('')+infMore('abur',state.bureau.length,false);
 }
 
 /* CRUD admin */
