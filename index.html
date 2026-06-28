@@ -7,6 +7,10 @@
 <title>RECAS — Association Africaine et de la Diaspora Résidente en Espagne · Tolède</title>
 <link rel="icon" href="logo.png" type="image/png"/>
 <link rel="apple-touch-icon" href="logo.png"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="RECAS"/>
 <link rel="manifest" href="manifest.json"/>
 <meta name="description" content="RECAS — Association de la communauté africaine et de sa diaspora résidant dans la province de Tolède (Espagne). Solidarité, entraide et rapatriement digne des membres défunts vers leur pays d'origine."/>
 <meta name="keywords" content="RECAS, association africaine Tolède, diaspora africaine Espagne, rapatriement corps Afrique, caisse de solidarité, cotisation, entraide africaine Toledo"/>
@@ -1164,22 +1168,30 @@ function guideOnglet(btn,os){
   }[os];
   document.getElementById('guideTxt').innerHTML=txt;
 }
+function estStandalone(){ return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone===true; }
+function estIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); }
 function installerApp(){
   const b=document.getElementById('installBanner'); if(b) b.classList.remove('show'); localStorage.setItem('recas_install_hide','1');
-  if(deferred){ deferred.prompt(); deferred.userChoice.finally(()=>{ deferred=null; }); return; }
+  if(estStandalone()){ toast('✓ RECAS est déjà installée sur cet appareil'); return; }
+  if(deferred){ deferred.prompt(); deferred.userChoice.finally(()=>{ deferred=null; }); return; }   // ⬅️ installation en UN CLIC (Android / ordinateur)
+  // iPhone/iPad ou navigateur sans installation auto → on affiche directement les bons gestes
+  const def = estIOS() ? 'iphone' : (/android/i.test(navigator.userAgent) ? 'android' : 'ordi');
+  const note = estIOS()
+    ? `<p class="muted" style="font-size:12.5px;text-align:center;margin:-2px 0 12px">Sur iPhone/iPad, Apple n'autorise pas l'installation automatique. Voici les 3 gestes :</p>`
+    : `<p class="muted" style="font-size:13px;text-align:center">Accès rapide, hors-ligne, sur tous vos appareils.</p>`;
   modal(`<div style="text-align:center"><div class="logo-img" style="width:72px;height:72px;border-radius:50%;margin:0 auto 8px"></div></div>
     <h3 style="text-align:center">Installer l'application RECAS</h3>
-    <p class="muted" style="font-size:13px;text-align:center">Accès rapide, hors-ligne, sur tous vos appareils.</p>
+    ${note}
     <div id="installGuide">
       <div class="guide-tabs">
-        <button class="active" onclick="guideOnglet(this,'android')">📱 Android</button>
-        <button onclick="guideOnglet(this,'iphone')">🍎 iPhone / iPad</button>
-        <button onclick="guideOnglet(this,'ordi')">💻 Ordinateur</button>
+        <button data-os="android" onclick="guideOnglet(this,'android')">📱 Android</button>
+        <button data-os="iphone" onclick="guideOnglet(this,'iphone')">🍎 iPhone / iPad</button>
+        <button data-os="ordi" onclick="guideOnglet(this,'ordi')">💻 Ordinateur</button>
       </div>
       <div id="guideTxt" style="font-size:14px;line-height:1.9"></div>
     </div>
     <div style="margin-top:14px"><button class="btn alt" onclick="fermerModal()">Fermer</button></div>`);
-  guideOnglet(document.querySelector('#installGuide .guide-tabs button'),'android');
+  guideOnglet(document.querySelector('#installGuide .guide-tabs button[data-os="'+def+'"]'), def);
 }
 /* PWA : service worker réactivé. Il ne met en cache QUE les fichiers du site
    et ne touche jamais au trafic Firebase (le temps réel reste intact). */
