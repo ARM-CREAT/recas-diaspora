@@ -1046,7 +1046,7 @@ function renderAdmin(){
   document.querySelector('#aCotTable tbody').innerHTML=(infList('acot',cotL).map(c=>`
     <tr><td>${fmtDate(c.date)}</td><td>${esc(c.nom)}${c.num?' · '+esc(c.num):''}</td><td><strong>${eur(c.montant)}</strong></td><td>${esc(c.moyen)}</td>
     <td><span class="pill ${c.statut==='Confirmée'?'ok':'wait'}">${esc(c.statut)}</span></td>
-    <td>${c.statut!=='Confirmée'?`<button class="btn sm" onclick="confirmerCotis('${c.id}')">✓ Confirmer</button>`:''} <button class="btn sm warn" onclick="suppCotis('${c.id}')">🗑️</button></td></tr>`).join('')
+    <td>${c.statut!=='Confirmée'?`<button class="btn sm" onclick="confirmerCotis('${c.id}')">✓ Confirmer</button>`:`<button class="btn sm alt" onclick="recuCotisationPDF('${c.id}')">📄 Reçu</button>`} <button class="btn sm warn" onclick="suppCotis('${c.id}')">🗑️</button></td></tr>`).join('')
     ||'<tr><td colspan="6" class="muted center">Aucune cotisation</td></tr>')+infMore('acot',cotL.length,true,6);
   // rapatriements
   document.getElementById('aRapList').innerHTML=(infList('arap',state.rapatriements).map(r=>`
@@ -1070,12 +1070,78 @@ function renderAdmin(){
 }
 
 /* CRUD admin */
+/* ==================== REÇU PDF (jsPDF chargé à la demande) ==================== */
+function chargerJsPDF(cb){
+  if(window.jspdf && window.jspdf.jsPDF){ cb(); return; }
+  toast('Préparation du reçu…');
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  s.onload=function(){ cb(); };
+  s.onerror=function(){ toast('⚠️ Générateur PDF indisponible (vérifiez la connexion).'); };
+  document.head.appendChild(s);
+}
+function recuCotisationPDF(id){
+  const c=state.cotis.find(x=>x.id===id); if(!c){ toast('Cotisation introuvable'); return; }
+  chargerJsPDF(function(){
+    try{
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({unit:'mm', format:'a4'});
+      const bleu=[21,54,107], orange=[232,130,30], vert=[27,122,57];
+      const an = new Date(c.date).getFullYear();
+      const ref = 'REC-'+an+'-'+String(id).replace(/\D/g,'').slice(-6);
+      // bandeau
+      doc.setFillColor(bleu[0],bleu[1],bleu[2]); doc.rect(0,0,210,32,'F');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.text('RECAS', 16, 15);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.text('Association Africaine et de la Diaspora Residente en Espagne', 16, 21);
+      doc.text('Province de Tolede  ·  Unite · Entraide · Accompagnement', 16, 26);
+      // titre
+      doc.setTextColor(bleu[0],bleu[1],bleu[2]); doc.setFont('helvetica','bold'); doc.setFontSize(16);
+      doc.text('Recu de cotisation', 16, 48);
+      doc.setDrawColor(orange[0],orange[1],orange[2]); doc.setLineWidth(1); doc.line(16,51,62,51);
+      doc.setTextColor(90,90,90); doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      doc.text('Recu n°  : '+ref, 130, 44);
+      doc.text('Date     : '+new Date(c.date).toLocaleDateString('fr-FR'), 130, 50);
+      // bloc détails
+      doc.setDrawColor(220,215,200); doc.setFillColor(250,248,242);
+      doc.roundedRect(16,60,178,58,3,3,'FD');
+      const rows=[
+        ['Membre', c.nom||'—'],
+        ["N° d'adherent", c.num||'—'],
+        ['Montant regle', (Number(c.montant)||0)+' EUR'],
+        ['Moyen de paiement', c.moyen||'—'],
+        ['Statut', c.statut||'—'],
+        ['Periode', 'Cotisation annuelle '+an]
+      ];
+      let y=72;
+      rows.forEach(function(r){
+        doc.setTextColor(40,40,40); doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(r[0]+' :', 24, y);
+        doc.setFont('helvetica','normal'); doc.text(String(r[1]), 86, y);
+        y+=8;
+      });
+      // mentions
+      doc.setTextColor(90,90,90); doc.setFontSize(9);
+      doc.text("Ce recu atteste du versement de la cotisation annuelle a l'association RECAS.", 16, 130);
+      doc.text('Merci pour votre solidarite.  Unite · Entraide · Accompagnement.', 16, 136);
+      // pied
+      doc.setDrawColor(vert[0],vert[1],vert[2]); doc.setLineWidth(0.6); doc.line(16,150,194,150);
+      doc.setFontSize(8); doc.setTextColor(120,120,120);
+      doc.text('RECAS — Province de Tolede, Espagne', 16, 156);
+      doc.text('Document genere le '+new Date().toLocaleDateString('fr-FR'), 16, 161);
+      doc.save('Recu-RECAS-'+(c.num||'membre')+'-'+ref+'.pdf');
+      toast('📄 Reçu PDF généré');
+    }catch(e){ toast('⚠️ Erreur reçu : '+e.message); }
+  });
+}
+
 function confirmerCotis(id){
   const c=state.cotis.find(x=>x.id===id); if(!c) return;
   c.statut='Confirmée'; c.date=Date.now();
   // lier au membre par numéro, ou tenter par nom
   if(!c.num){ const m=state.membres.find(m=>((m.prenom||'')+' '+m.nom).toLowerCase().trim()===c.nom.toLowerCase().trim()); if(m) c.num=m.num; }
   save(); toast('✓ Cotisation confirmée — membre à jour'); renderAll();
+  recuCotisationPDF(id);   // reçu PDF automatique à la confirmation
 }
 function suppCotis(id){ if(!confirm('Supprimer cette cotisation ?'))return; state.cotis=state.cotis.filter(x=>x.id!==id); save(); renderAll(); }
 function suppMembre(num){ if(!confirm('Supprimer ce membre ?'))return; state.membres=state.membres.filter(m=>m.num!==num); save(); renderAll(); }
