@@ -18,14 +18,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getFirestore, doc, onSnapshot, setDoc }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* 🔧 1. Configuration Firebase (projet « laparolmaliaenne » — réutilisé) */
+/* 🔧 1. Configuration Firebase (projet dédié « recas-diaspora ») */
 const firebaseConfig = {
-  apiKey:            "AIzaSyCmBT24qQlfuSSni9-5sq2noMsaJLsEwdg",
-  authDomain:        "laparolmaliaenne.firebaseapp.com",
-  projectId:         "laparolmaliaenne",
-  storageBucket:     "laparolmaliaenne.firebasestorage.app",
-  messagingSenderId: "543660374810",
-  appId:             "1:543660374810:web:727dc079734a6964bdcaa3"
+  apiKey:            "AIzaSyCEAb0xRKr47VCR0BpuLuTsXiKHWOm0IOQ",
+  authDomain:        "recas-diaspora.firebaseapp.com",
+  projectId:         "recas-diaspora",
+  storageBucket:     "recas-diaspora.firebasestorage.app",
+  messagingSenderId: "188306361865",
+  appId:             "1:188306361865:web:0858e91d8ebd2db6bdb2d8"
 };
 
 /* ------------------------------------------------------------ */
