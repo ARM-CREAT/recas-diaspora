@@ -226,6 +226,10 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
   .card{box-shadow:none;border:1px solid #999}
   .hero{background:#fff;color:#000;padding:0;border:0}
 }
+.ratio{position:relative;width:100%;padding-top:56.25%;border-radius:10px;overflow:hidden;background:#000}
+.ratio iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.ratio.tiktok{padding-top:130%;max-width:340px;margin:0 auto}
+.gal-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
 </style>
 </head>
 <body>
@@ -261,6 +265,7 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
       <button data-page="transparence">La caisse</button>
       <button data-page="annonces">Annonces</button>
       <button data-page="evenements">Événements</button>
+      <button data-page="medias">📻 Médias</button>
       <button data-page="contact">Contact</button>
       <button data-page="admin" id="adminBtn">🔐 Admin</button>
     </nav>
@@ -476,6 +481,14 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
   <div id="evt-list" class="grid c2"></div>
 </section>
 
+<!-- MÉDIAS -->
+<section class="page" id="page-medias">
+  <div class="h-section"><h3>Médias</h3><span class="sub">Radio Diaspora · Galerie</span></div>
+  <div class="card" id="radioCard"></div>
+  <div class="h-section" style="margin-top:24px"><h3>Galerie</h3><span class="sub">Photos &amp; vidéos de la vie de l'association</span></div>
+  <div id="galerie-list"></div>
+</section>
+
 <!-- CONTACT -->
 <section class="page" id="page-contact">
   <div class="h-section"><h3>Contact</h3><span class="sub">Le bureau à votre écoute</span></div>
@@ -526,6 +539,7 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
         <button data-adm="caisse">🏦 Caisse & rapatriements</button>
         <button data-adm="annonces">📣 Annonces</button>
         <button data-adm="evt">📅 Événements</button>
+        <button data-adm="medias">📻 Médias</button>
         <button data-adm="bureau">🪑 Bureau</button>
         <button data-adm="contenu">🏠 Textes du site</button>
         <button data-adm="param">⚙️ Paramètres</button>
@@ -634,6 +648,15 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
           </div>
         </div>
 
+        <div class="admin-pane" data-pane="medias" style="display:none">
+          <div class="card"><h4>📻 Radio Diaspora</h4><div id="admRadio"></div>
+            <div class="muted" style="font-size:12px;margin-top:8px">Flux audio = lien direct .mp3/.aac de la radio. Live YouTube = lien de la vidéo en direct.</div></div>
+          <div class="card" style="margin-top:14px"><h4>Galerie — nouvel album</h4>
+            <div class="form-row"><div><label>Titre de l'album</label><input type="text" id="albTitre" placeholder="Réunion RECAS 2026"/></div>
+            <div><label>Description (option)</label><input type="text" id="albDesc"/></div></div>
+            <button class="btn" onclick="addAlbum()" style="margin-top:10px">Créer l'album</button>
+            <hr class="s"/><h4>Albums</h4><div id="admAlbums"></div></div>
+        </div>
         <div class="admin-pane" data-pane="contenu" style="display:none">
           <div class="card">
             <h4>Page d'accueil</h4>
@@ -743,6 +766,7 @@ const DEFAULT={
     proc:"Prévenir le bureau|Appelez RECAS jour et nuit. Un référent est désigné pour accompagner la famille.\nRéunir les documents|Pièce d'identité et passeport du défunt, certificat de décès, coordonnées de la famille au pays.\nFormalités et consulat|Le bureau coordonne les démarches avec les pompes funèbres et le consulat du pays d'origine.\nOrganisation du transport|RECAS organise et finance le transport du défunt vers son pays d'origine.\nAccompagnement de la famille|Soutien moral et logistique jusqu'à l'arrivée et l'inhumation au pays.",
     tiers:[10,20,30,40,50],
     modele:"annuelle",
+    radio:{type:"off", url:"", titre:"Radio Diaspora RECAS"},
     bizum:"+34 600 000 000",
     iban:"ES00 0000 0000 0000 0000 0000",
     tel:"+34 600 000 000",
@@ -756,7 +780,7 @@ const DEFAULT={
     {id:'b2',nom:"—",fonc:"Trésorier",tel:"",lieu:"Tolède, Espagne"},
     {id:'b3',nom:"—",fonc:"Secrétaire général",tel:"",lieu:"Tolède, Espagne"}
   ],
-  membres:[], cotis:[], rapatriements:[], annonces:[], evt:[], msgs:[],
+  membres:[], cotis:[], rapatriements:[], annonces:[], evt:[], msgs:[], albums:[],
   auth:{user:'recas', pass:'recas2026'}
 };
 function load(){ try{const r=localStorage.getItem(STORE_KEY); if(r) return JSON.parse(r);}catch(e){} return JSON.parse(JSON.stringify(DEFAULT)); }
@@ -937,9 +961,110 @@ function infObserve(){
   document.querySelectorAll('.inf-sentinel').forEach(function(s){ infObs.observe(s); });
 }
 
+/* ==================== MÉDIAS : Radio Diaspora + Galerie ==================== */
+function ytId(u){ if(!u) return ''; u=u.trim();
+  var m=u.match(/(?:youtube\.com\/(?:watch\?v=|live\/|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+  if(m) return m[1];
+  if(/^[\w-]{6,}$/.test(u)) return u;
+  return '';
+}
+function tiktokId(u){ if(!u) return ''; var m=u.match(/video\/(\d{6,})/); if(m) return m[1]; if(/^\d{6,}$/.test(u)) return u; return ''; }
+function mediaEmbed(it){
+  if(it.type==='youtube') return '<div class="ratio"><iframe src="https://www.youtube.com/embed/'+it.vid+'" title="'+esc(it.titre||'Vidéo')+'" frameborder="0" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+  if(it.type==='tiktok')  return '<div class="ratio tiktok"><iframe src="https://www.tiktok.com/embed/v2/'+it.vid+'" title="'+esc(it.titre||'TikTok')+'" frameborder="0" allowfullscreen loading="lazy"></iframe></div>';
+  if(it.type==='image')   return '<img src="'+it.url+'" alt="'+esc(it.titre||'')+'" loading="lazy" style="width:100%;border-radius:10px"/>';
+  return '';
+}
+function renderMedias(){
+  var r=(state.cfg&&state.cfg.radio)||{type:'off',url:'',titre:'Radio Diaspora'};
+  var rc=document.getElementById('radioCard');
+  if(rc){
+    var inner;
+    if(r.type==='youtube' && ytId(r.url)) inner='<div class="ratio"><iframe src="https://www.youtube.com/embed/'+ytId(r.url)+'" title="Radio Diaspora" frameborder="0" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+    else if(r.type==='stream' && r.url) inner='<audio controls preload="none" style="width:100%" src="'+esc(r.url)+'"></audio>';
+    else inner='<p class="muted">📴 Radio Diaspora est actuellement hors antenne. Revenez bientôt !</p>';
+    rc.innerHTML='<div class="h-section" style="margin-top:0"><h3>📻 '+esc(r.titre||'Radio Diaspora')+'</h3><span class="sub">En direct</span></div>'+inner;
+  }
+  var gl=document.getElementById('galerie-list');
+  if(gl){
+    var albums=state.albums||[];
+    if(!albums.length){ gl.innerHTML='<p class="muted">Aucun album pour le moment.</p>'; return; }
+    gl.innerHTML=albums.slice().reverse().map(function(a){
+      var items=(a.items||[]).map(function(it){ return '<div class="gal-item">'+mediaEmbed(it)+(it.titre?'<div class="muted" style="font-size:12px;margin-top:4px">'+esc(it.titre)+'</div>':'')+'</div>'; }).join('');
+      return '<div class="card" style="margin-bottom:18px"><div style="font-family:var(--display);font-weight:600;font-size:18px;color:var(--bleu)">'+esc(a.titre)+'</div>'+(a.desc?'<div class="muted" style="font-size:13px;margin:2px 0 10px">'+esc(a.desc)+'</div>':'<div style="height:8px"></div>')+'<div class="gal-grid">'+(items||'<p class="muted">Album vide.</p>')+'</div></div>';
+    }).join('');
+  }
+}
+/* Compression d'image côté navigateur (prête pour l'upload Storage — étape 3) */
+function compressImage(file, maxDim, cb){
+  maxDim=maxDim||1280; var img=new Image(), rd=new FileReader();
+  rd.onload=function(){ img.onload=function(){
+    var w=img.width, h=img.height;
+    if(w>h && w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } else if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; }
+    var cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+    cv.toBlob(function(blob){ cb(blob, cv.toDataURL('image/webp',0.82)); }, 'image/webp', 0.82);
+  }; img.src=rd.result; };
+  rd.readAsDataURL(file);
+}
+/* ---- Admin Médias ---- */
+function setRadio(){
+  state.cfg.radio={ type:val('rdType'), url:(val('rdUrl')||'').trim(), titre:(val('rdTitre')||'').trim()||'Radio Diaspora RECAS' };
+  save(); toast('📻 Radio mise à jour'); renderAll();
+}
+function addAlbum(){
+  var t=(val('albTitre')||'').trim(); if(!t){ toast("Donnez un titre à l'album"); return; }
+  state.albums=state.albums||[];
+  state.albums.push({ id:'alb'+Date.now(), titre:t, desc:(val('albDesc')||'').trim(), date:Date.now(), items:[] });
+  var i1=document.getElementById('albTitre'); if(i1) i1.value=''; var i2=document.getElementById('albDesc'); if(i2) i2.value='';
+  save(); toast('Album créé'); renderAll();
+}
+function suppAlbum(id){ if(!confirm('Supprimer cet album et son contenu ?'))return; state.albums=(state.albums||[]).filter(function(a){return a.id!==id;}); save(); renderAll(); }
+function addLien(albumId){
+  var a=(state.albums||[]).find(function(x){return x.id===albumId;}); if(!a)return;
+  var u=(val('lien_'+albumId)||'').trim(); if(!u){ toast('Collez un lien YouTube ou TikTok'); return; }
+  var yi=ytId(u), ti=tiktokId(u), it=null;
+  if(yi) it={ id:'it'+Date.now(), type:'youtube', vid:yi, titre:(val('lienT_'+albumId)||'').trim() };
+  else if(ti) it={ id:'it'+Date.now(), type:'tiktok', vid:ti, titre:(val('lienT_'+albumId)||'').trim() };
+  else { toast('Lien non reconnu (YouTube ou TikTok attendu)'); return; }
+  a.items.push(it);
+  var l=document.getElementById('lien_'+albumId); if(l) l.value=''; var lt=document.getElementById('lienT_'+albumId); if(lt) lt.value='';
+  save(); toast('Vidéo ajoutée'); renderAll();
+}
+function suppItem(albumId, itemId){
+  var a=(state.albums||[]).find(function(x){return x.id===albumId;}); if(!a)return;
+  a.items=a.items.filter(function(i){return i.id!==itemId;}); save(); renderAll();
+}
+function renderAdminMedias(){
+  var r=(state.cfg&&state.cfg.radio)||{type:'off',url:'',titre:''};
+  var rd=document.getElementById('admRadio');
+  if(rd){
+    var opts=[['off','Hors antenne'],['stream','Flux audio (URL .mp3/.aac)'],['youtube','Live YouTube']]
+      .map(function(o){ return '<option value="'+o[0]+'"'+(r.type===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('');
+    rd.innerHTML='<div class="form-row"><div><label>État</label><select id="rdType">'+opts+'</select></div>'
+      +'<div><label>Titre</label><input type="text" id="rdTitre" value="'+esc(r.titre||'')+'"/></div></div>'
+      +'<div><label>URL (flux audio ou lien YouTube)</label><input type="text" id="rdUrl" value="'+esc(r.url||'')+'" placeholder="https://..."/></div>'
+      +'<button class="btn" onclick="setRadio()" style="margin-top:10px">Enregistrer la radio</button>';
+  }
+  var am=document.getElementById('admAlbums');
+  if(am){
+    var albums=state.albums||[];
+    am.innerHTML=albums.slice().reverse().map(function(a){
+      var items=(a.items||[]).map(function(it){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px"><span style="font-size:13px">'+(it.type==='youtube'?'▶️ YouTube':it.type==='tiktok'?'🎵 TikTok':'🖼️ Image')+(it.titre?' — '+esc(it.titre):'')+'</span><button class="btn sm warn" onclick="suppItem(\''+a.id+'\',\''+it.id+'\')">🗑️</button></div>';
+      }).join('')||'<p class="muted" style="font-size:13px">Album vide.</p>';
+      return '<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><strong>'+esc(a.titre)+'</strong><button class="btn sm warn" onclick="suppAlbum(\''+a.id+'\')">Supprimer</button></div>'
+        +(a.desc?'<div class="muted" style="font-size:12px">'+esc(a.desc)+'</div>':'')
+        +'<div style="margin:10px 0">'+items+'</div>'
+        +'<div class="form-row"><div><label>Lien YouTube / TikTok</label><input type="text" id="lien_'+a.id+'" placeholder="https://..."/></div><div><label>Légende (option)</label><input type="text" id="lienT_'+a.id+'"/></div></div>'
+        +'<button class="btn sm" onclick="addLien(\''+a.id+'\')">+ Ajouter la vidéo</button>'
+        +'<div class="muted" style="font-size:12px;margin-top:6px">📷 L\'ajout de photos arrive à l\'étape suivante (Firebase Storage).</div></div>';
+    }).join('')||'<p class="muted">Aucun album. Créez-en un ci-dessus.</p>';
+  }
+}
+
 function renderAll(){
   renderAccueil(); renderAssociation(); renderCotisationPage(); renderMembres();
-  renderProcedure(); renderTransparence(); renderAnnonces(); renderEvt(); renderContact();
+  renderProcedure(); renderTransparence(); renderAnnonces(); renderEvt(); renderContact(); renderMedias();
   if(state.auth.logged) renderAdmin();
   infObserve();
 }
@@ -1029,6 +1154,7 @@ document.querySelectorAll('.admin-side button').forEach(b=>b.onclick=()=>{
 });
 
 function renderAdmin(){
+  renderAdminMedias();
   const jour=state.membres.filter(m=>aJour(m.num)).length;
   document.getElementById('aKpiMem').textContent=state.membres.length;
   document.getElementById('aKpiJour').textContent=jour;
