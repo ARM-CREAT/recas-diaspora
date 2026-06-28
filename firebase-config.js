@@ -18,7 +18,25 @@ var RECAS_FIREBASE_CONFIG = {
 };
 
 (function () {
-  function notify(m){ try { if (typeof window.toast === "function") window.toast(m); } catch(e){} console.log("RECAS:", m); }
+  /* Bandeau de statut bien visible en haut de l'écran (diagnostic) */
+function showStatus(text, ok){
+  var el = document.getElementById("recas-fb-status");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "recas-fb-status";
+    el.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;padding:9px 14px;font:600 13px/1.4 system-ui,sans-serif;text-align:center;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)";
+    el.onclick = function(){ el.style.display = "none"; };
+    (document.body || document.documentElement).appendChild(el);
+  }
+  el.style.display = "block";
+  el.style.background = ok ? "#1b7a39" : "#cf2e2e";
+  el.textContent = (ok ? "✅ " : "⚠️ ") + text + "  ·  (toucher pour masquer)";
+}
+function notify(m){
+  try { if (typeof window.toast === "function") window.toast(m); } catch(e){}
+  showStatus(m.replace(/^[✅⚠️]\s*/, ""), m.indexOf("✅") === 0 || /connect/i.test(m));
+  console.log("RECAS:", m);
+}
   window.RECAS_FB_STATUS = "init";
 
   if (typeof firebase === "undefined") {

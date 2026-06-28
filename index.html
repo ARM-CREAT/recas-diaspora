@@ -756,7 +756,7 @@ const DEFAULT={
   auth:{user:'recas', pass:'recas2026'}
 };
 function load(){ try{const r=localStorage.getItem(STORE_KEY); if(r) return JSON.parse(r);}catch(e){} return JSON.parse(JSON.stringify(DEFAULT)); }
-function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); try{bc.postMessage('refresh');}catch(e){} }
+function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); try{bc.postMessage('refresh');}catch(e){} if(typeof window.onStateSaved==='function'){ try{window.onStateSaved();}catch(e){} } }
 var state=load(); window.state=state;
 for(const k in DEFAULT){ if(state[k]===undefined) state[k]=JSON.parse(JSON.stringify(DEFAULT[k])); }
 for(const k in DEFAULT.cfg){ if(state.cfg[k]===undefined) state.cfg[k]=JSON.parse(JSON.stringify(DEFAULT.cfg[k])); }
@@ -1155,7 +1155,12 @@ function installerApp(){
     <div style="margin-top:14px"><button class="btn alt" onclick="fermerModal()">Fermer</button></div>`);
   guideOnglet(document.querySelector('#installGuide .guide-tabs button'),'android');
 }
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+/* Temporairement : on retire le service worker et son cache pour fiabiliser le temps réel.
+   (La PWA / installation sera réactivée une fois la synchro confirmée.) */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); }).catch(function(){});
+  if(window.caches){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }).catch(function(){}); }
+}
 
 /* hooks filtres */
 document.getElementById('memSearch').addEventListener('input',renderMembres);
@@ -1170,6 +1175,9 @@ function init(){
 init();
 </script>
 <!-- Synchronisation temps réel multi-appareils (optionnel) -->
-<script type="module" src="firebase-config.js"></script>
+<!-- Firebase : synchronisation temps réel multi-appareils -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 </body>
 </html>
