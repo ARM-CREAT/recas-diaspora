@@ -1,0 +1,13 @@
+{
+  "name": "RECAS — Association Africaine et de la Diaspora Résidente en Espagne",
+  "short_name": "RECAS",
+  "description": "Solidarité, entraide et rapatriement digne — Province de Tolède.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f0e6",
+  "theme_color": "#15366b",
+  "icons": [
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
