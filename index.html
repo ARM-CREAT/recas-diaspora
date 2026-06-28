@@ -1155,12 +1155,9 @@ function installerApp(){
     <div style="margin-top:14px"><button class="btn alt" onclick="fermerModal()">Fermer</button></div>`);
   guideOnglet(document.querySelector('#installGuide .guide-tabs button'),'android');
 }
-/* Temporairement : on retire le service worker et son cache pour fiabiliser le temps réel.
-   (La PWA / installation sera réactivée une fois la synchro confirmée.) */
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); }).catch(function(){});
-  if(window.caches){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }).catch(function(){}); }
-}
+/* PWA : service worker réactivé. Il ne met en cache QUE les fichiers du site
+   et ne touche jamais au trafic Firebase (le temps réel reste intact). */
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
 
 /* hooks filtres */
 document.getElementById('memSearch').addEventListener('input',renderMembres);
