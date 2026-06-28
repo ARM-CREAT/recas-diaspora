@@ -1,0 +1,5 @@
+# RECAS — Association Africaine et de la Diaspora Résidente en Espagne
+User-agent: *
+Allow: /
+
+Sitemap: https://recas-diaspora.vercel.app/sitemap.xml
