@@ -35,7 +35,9 @@ var RECAS_FIREBASE_CONFIG = {
     var applyingRemote = false, connected = false, timer = null;
 
     function pushNow(){
-      ref.set({ state: JSON.stringify(window.state), writer: clientId, ts: Date.now() })
+      var snap = {};                                   // copie de l'état SANS les identifiants admin
+      for (var k in window.state) { if (k !== "auth") snap[k] = window.state[k]; }
+      ref.set({ state: JSON.stringify(snap), writer: clientId, ts: Date.now() })
         .then(function(){ window.RECAS_FB_STATUS = "ok"; })
         .catch(function(e){ window.RECAS_FB_STATUS = "error:" + (e.code || e.message); notify("⚠️ Envoi temps réel échoué : " + (e.code || e.message)); });
     }
@@ -50,7 +52,7 @@ var RECAS_FIREBASE_CONFIG = {
       if (data.writer === clientId) return;           // notre propre écho → ignorer
       try {
         var incoming = JSON.parse(data.state);
-        if (window.state && window.state.auth && window.state.auth.logged) incoming.auth = window.state.auth;
+        incoming.auth = (window.state && window.state.auth) ? window.state.auth : incoming.auth;  // identifiants admin = locaux uniquement
         applyingRemote = true;
         window.state = incoming;
         if (typeof renderAll === "function") renderAll();
