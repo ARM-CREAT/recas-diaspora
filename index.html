@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="RECAS"/>
 <link rel="manifest" href="manifest.json"/>
+<script>window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bip=e;});window.addEventListener('appinstalled',function(){window.__bip=null;});</script>
 <meta name="description" content="RECAS — Association de la communauté africaine et de sa diaspora résidant dans la province de Tolède (Espagne). Solidarité, entraide et rapatriement digne des membres défunts vers leur pays d'origine."/>
 <meta name="keywords" content="RECAS, association africaine Tolède, diaspora africaine Espagne, rapatriement corps Afrique, caisse de solidarité, cotisation, entraide africaine Toledo"/>
 <meta name="author" content="RECAS"/>
@@ -230,6 +231,8 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
 .ratio iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .ratio.tiktok{padding-top:130%;max-width:340px;margin:0 auto}
 .gal-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.inf-spin{display:inline-block;width:18px;height:18px;border:2.5px solid var(--line);border-top-color:var(--orange);border-radius:50%;animation:infspin .7s linear infinite;vertical-align:middle}
+@keyframes infspin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -566,7 +569,7 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
           <div class="card">
             <div class="row"><h4 style="margin:0">Membres</h4><span class="right"><button class="btn alt sm" onclick="exporterCSV('membres')">⬇️ Export CSV</button></span></div>
             <div style="overflow-x:auto;margin-top:10px"><table class="tbl" id="aMemTable">
-              <thead><tr><th>N°</th><th>Nom</th><th>Tél</th><th>Pays</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody>
+              <thead><tr><th>N°</th><th>Nom &amp; Prénom</th><th>Ville &amp; Province</th><th>Téléphone</th><th>Inscription</th><th>Statut</th><th>Actions</th></tr></thead><tbody></tbody>
             </table></div>
           </div>
         </div>
@@ -575,6 +578,20 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
           <div class="card">
             <div class="row"><h4 style="margin:0">Cotisations</h4><span class="right"><button class="btn alt sm" onclick="exporterCSV('cotisations')">⬇️ Export CSV</button></span></div>
             <p class="muted" style="font-size:12px">Confirmez une cotisation dès réception du paiement : le membre passe « à jour ».</p>
+            <hr class="s"/>
+            <h4 style="margin:0 0 8px">Enregistrer une cotisation (espèces / virement)</h4>
+            <div class="form-row">
+              <div><label>N° d'adhérent</label><input type="text" id="mcNum" list="memNums" autocomplete="off" oninput="mcAuto()" placeholder="RECAS-2026-..."/></div>
+              <div><label>Nom (auto)</label><input type="text" id="mcNom" readonly placeholder="se remplit tout seul"/></div>
+            </div>
+            <datalist id="memNums"></datalist>
+            <div class="form-row">
+              <div><label>Montant (€)</label><input type="number" id="mcMontant" min="0" step="1"/></div>
+              <div><label>Période</label><select id="mcPeriode"><option>Année</option><option>Mois</option><option>Jour</option></select></div>
+              <div><label>Moyen</label><select id="mcMoyen"><option>Espèces</option><option>Virement</option><option>Bizum</option></select></div>
+            </div>
+            <button class="btn" onclick="enregistrerCotis()" style="margin-top:10px">Enregistrer la cotisation</button>
+            <hr class="s"/><h4 style="margin:0 0 6px">Historique</h4>
             <div style="overflow-x:auto;margin-top:10px"><table class="tbl" id="aCotTable">
               <thead><tr><th>Date</th><th>Membre</th><th>Montant</th><th>Moyen</th><th>Statut</th><th></th></tr></thead><tbody></tbody>
             </table></div>
@@ -940,14 +957,14 @@ function renderContact(){
 }
 
 /* ==================== DÉFILEMENT INFINI ==================== */
-const INF_BATCH = 12;
+const INF_BATCH = 20;
 const infShown = {};
 function infList(key, arr){ if(infShown[key]==null) infShown[key]=INF_BATCH; return arr.slice(0, infShown[key]); }
 function infMore(key, total, asRow, cols){
   if((infShown[key]||INF_BATCH) >= total) return '';
   return asRow
-    ? `<tr><td colspan="${cols}" style="padding:0;border:0"><div class="inf-sentinel" data-key="${key}" style="height:1px"></div></td></tr>`
-    : `<div class="inf-sentinel" data-key="${key}" style="height:1px"></div>`;
+    ? `<tr><td colspan="${cols}" style="padding:10px;border:0;text-align:center"><span class="inf-sentinel" data-key="${key}"><span class="inf-spin"></span></span></td></tr>`
+    : `<div class="inf-sentinel" data-key="${key}" style="text-align:center;padding:12px"><span class="inf-spin"></span></div>`;
 }
 let infObs=null;
 function infObserve(){
@@ -1163,16 +1180,17 @@ function renderAdmin(){
   // membres
   document.querySelector('#aMemTable tbody').innerHTML=(infList('amem',state.membres).map(m=>{
     const j=aJour(m.num);
-    return `<tr><td><strong>${esc(m.num)}</strong></td><td>${esc((m.prenom||'')+' '+m.nom)}</td><td>${esc(m.tel||'')}</td><td>${esc(m.pays||'')}</td>
+    return `<tr><td><strong>${esc(m.num)}</strong></td><td>${esc((m.prenom||'')+' '+m.nom)}</td><td>${esc(m.ville||'—')}${m.pays?' · '+esc(m.pays):''}</td><td>${esc(m.tel||'—')}</td><td>${fmtDate(m.date)}</td>
     <td><span class="pill ${j?'ok':'late'}">${j?'À jour':'En retard'}</span></td>
-    <td><button class="btn sm warn" onclick="suppMembre('${m.num}')">🗑️</button></td></tr>`;
-  }).join('')||'<tr><td colspan="6" class="muted center">Aucun membre</td></tr>')+infMore('amem',state.membres.length,true,6);
+    <td><button class="btn sm alt" onclick="editMembre('${m.num}')">✏️</button> <button class="btn sm warn" onclick="suppMembre('${m.num}')">🗑️</button></td></tr>`;
+  }).join('')||'<tr><td colspan="7" class="muted center">Aucun membre</td></tr>')+infMore('amem',state.membres.length,true,7);
+  const dl=document.getElementById('memNums'); if(dl) dl.innerHTML=state.membres.map(m=>`<option value="${esc(m.num)}">${esc((m.prenom||'')+' '+m.nom)}</option>`).join('');
   // cotisations
   const cotL=[...state.cotis].sort((a,b)=>b.date-a.date);
   document.querySelector('#aCotTable tbody').innerHTML=(infList('acot',cotL).map(c=>`
-    <tr><td>${fmtDate(c.date)}</td><td>${esc(c.nom)}${c.num?' · '+esc(c.num):''}</td><td><strong>${eur(c.montant)}</strong></td><td>${esc(c.moyen)}</td>
+    <tr><td>${fmtDate(c.date)}</td><td>${esc(c.nom)}${c.num?' · '+esc(c.num):''}</td><td><strong>${eur(c.montant)}</strong></td><td>${esc(c.moyen)}${c.periode?' · '+esc(c.periode):''}</td>
     <td><span class="pill ${c.statut==='Confirmée'?'ok':'wait'}">${esc(c.statut)}</span></td>
-    <td>${c.statut!=='Confirmée'?`<button class="btn sm" onclick="confirmerCotis('${c.id}')">✓ Confirmer</button>`:`<button class="btn sm alt" onclick="recuCotisationPDF('${c.id}')">📄 Reçu</button>`} <button class="btn sm warn" onclick="suppCotis('${c.id}')">🗑️</button></td></tr>`).join('')
+    <td>${c.statut!=='Confirmée'?`<button class="btn sm" onclick="confirmerCotis('${c.id}')">✓ Confirmer</button>`:`<button class="btn sm alt" onclick="recuCotisationPDF('${c.id}')">📄 Reçu</button>`} <button class="btn sm alt" onclick="editCotis('${c.id}')">✏️</button> <button class="btn sm warn" onclick="suppCotis('${c.id}')">🗑️</button></td></tr>`).join('')
     ||'<tr><td colspan="6" class="muted center">Aucune cotisation</td></tr>')+infMore('acot',cotL.length,true,6);
   // rapatriements
   document.getElementById('aRapList').innerHTML=(infList('arap',state.rapatriements).map(r=>`
@@ -1270,7 +1288,46 @@ function confirmerCotis(id){
   recuCotisationPDF(id);   // reçu PDF automatique à la confirmation
 }
 function suppCotis(id){ if(!confirm('Supprimer cette cotisation ?'))return; state.cotis=state.cotis.filter(x=>x.id!==id); save(); renderAll(); }
-function suppMembre(num){ if(!confirm('Supprimer ce membre ?'))return; state.membres=state.membres.filter(m=>m.num!==num); save(); renderAll(); }
+function suppMembre(num){
+  const m=state.membres.find(x=>x.num===num); if(!m) return;
+  if(!confirm('Supprimer l\'adhérent '+num+' ('+((m.prenom||'')+' '+m.nom).trim()+') ?')) return;
+  if(!confirm('⚠️ Confirmation définitive et irréversible : supprimer cet adhérent ?')) return;
+  state.membres=state.membres.filter(x=>x.num!==num); save(); toast('Adhérent supprimé'); renderAll();
+}
+function editMembre(num){
+  const m=state.membres.find(x=>x.num===num); if(!m) return;
+  modal(`<h3>Modifier l'adhérent</h3><p class="muted" style="font-size:13px">${esc(m.num)} — ${esc((m.prenom||'')+' '+m.nom)}</p>
+    <div><label>Téléphone</label><input type="text" id="edTel" value="${esc(m.tel||'')}"/></div>
+    <div style="margin-top:8px"><label>Ville</label><input type="text" id="edVille" value="${esc(m.ville||'')}"/></div>
+    <div style="margin-top:8px"><label>Pays</label><input type="text" id="edPays" value="${esc(m.pays||'')}"/></div>
+    <div class="row" style="margin-top:14px"><button class="btn" onclick="sauverMembre('${num}')">Enregistrer</button> <button class="btn alt" onclick="fermerModal()">Annuler</button></div>`);
+}
+function sauverMembre(num){
+  const m=state.membres.find(x=>x.num===num); if(!m) return;
+  m.tel=(val('edTel')||'').trim(); m.ville=(val('edVille')||'').trim(); m.pays=(val('edPays')||'').trim();
+  save(); fermerModal(); toast('✓ Adhérent modifié'); renderAll();
+}
+function mcAuto(){
+  const num=(val('mcNum')||'').trim(); const m=state.membres.find(x=>x.num===num);
+  const e=document.getElementById('mcNom'); if(e) e.value = m ? ((m.prenom||'')+' '+m.nom).trim() : '';
+}
+function enregistrerCotis(){
+  const num=(val('mcNum')||'').trim(); const m=state.membres.find(x=>x.num===num);
+  const nom = m ? ((m.prenom||'')+' '+m.nom).trim() : '';
+  const montant=+val('mcMontant')||0;
+  if(!num||!montant){ toast('⚠️ N° d\'adhérent et montant requis'); return; }
+  if(!m && !confirm('Aucun adhérent ne correspond à ce numéro. Enregistrer quand même ?')) return;
+  state.cotis.push({ id:'c'+Date.now(), date:Date.now(), nom, num, montant, moyen:val('mcMoyen'), periode:val('mcPeriode'), statut:'Confirmée' });
+  ['mcNum','mcNom','mcMontant'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';});
+  save(); toast('✓ Cotisation enregistrée — membre à jour'); renderAll();
+}
+function editCotis(id){
+  const c=state.cotis.find(x=>x.id===id); if(!c) return;
+  const v=prompt('Nouveau montant (€) pour '+(c.nom||'cette cotisation')+' :', c.montant);
+  if(v===null) return; const n=parseFloat(v);
+  if(isNaN(n)||n<0){ toast('Montant invalide'); return; }
+  c.montant=n; save(); toast('✓ Montant modifié'); renderAll();
+}
 function ajouterRapatriement(){
   const r={id:'r'+Date.now(),membre:val('rMembre'),pays:val('rPays'),date:val('rDate')||new Date().toISOString().slice(0,10),montant:+val('rMontant')||0};
   if(!r.membre){ toast('⚠️ Indiquez le membre'); return; }
@@ -1346,10 +1403,11 @@ function setLang(lang){
 (function loadGT(){ if(document.querySelector('script[src*="translate.google.com"]')) return; const s=document.createElement('script'); s.src='//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit'; s.async=true; document.head.appendChild(s); })();
 
 /* ==================== PWA — INSTALLATION (tous appareils) ==================== */
-let deferred=null;
-window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferred=e;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); window.__bip=e;
   const b=document.getElementById('installBanner'); if(b && !localStorage.getItem('recas_install_hide')) b.classList.add('show'); });
-window.addEventListener('appinstalled',()=>{ const b=document.getElementById('installBanner'); if(b) b.classList.remove('show'); localStorage.setItem('recas_install_hide','1'); toast('✓ RECAS installée'); });
+window.addEventListener('appinstalled',()=>{ window.__bip=null; const b=document.getElementById('installBanner'); if(b) b.classList.remove('show'); localStorage.setItem('recas_install_hide','1'); toast('✓ RECAS installée'); });
+// l'invite a pu être captée très tôt (script du <head>) : on affiche la bannière
+if(window.__bip && !localStorage.getItem('recas_install_hide')){ const b=document.getElementById('installBanner'); if(b) b.classList.add('show'); }
 
 function guideOnglet(btn,os){
   document.querySelectorAll('#installGuide .guide-tabs button').forEach(x=>x.classList.remove('active')); btn.classList.add('active');
@@ -1365,12 +1423,12 @@ function estIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navi
 function installerApp(){
   const b=document.getElementById('installBanner'); if(b) b.classList.remove('show'); localStorage.setItem('recas_install_hide','1');
   if(estStandalone()){ toast('✓ RECAS est déjà installée sur cet appareil'); return; }
-  if(deferred){ deferred.prompt(); deferred.userChoice.finally(()=>{ deferred=null; }); return; }   // ⬅️ installation en UN CLIC (Android / ordinateur)
-  // iPhone/iPad ou navigateur sans installation auto → on affiche directement les bons gestes
+  if(window.__bip){ window.__bip.prompt(); window.__bip.userChoice.finally(()=>{ window.__bip=null; }); return; }   // ⬅️ installation en UN CLIC (Android / ordinateur)
+  // iPhone/iPad ou navigateur sans invite disponible → on affiche directement les bons gestes
   const def = estIOS() ? 'iphone' : (/android/i.test(navigator.userAgent) ? 'android' : 'ordi');
   const note = estIOS()
     ? `<p class="muted" style="font-size:12.5px;text-align:center;margin:-2px 0 12px">Sur iPhone/iPad, Apple n'autorise pas l'installation automatique. Voici les 3 gestes :</p>`
-    : `<p class="muted" style="font-size:13px;text-align:center">Accès rapide, hors-ligne, sur tous vos appareils.</p>`;
+    : `<p class="muted" style="font-size:12.5px;text-align:center;margin:-2px 0 12px">Votre navigateur n'a pas encore proposé l'installation directe. Suivez ces 2 gestes — ou réessayez dans quelques secondes.</p>`;
   modal(`<div style="text-align:center"><div class="logo-img" style="width:72px;height:72px;border-radius:50%;margin:0 auto 8px"></div></div>
     <h3 style="text-align:center">Installer l'application RECAS</h3>
     ${note}
