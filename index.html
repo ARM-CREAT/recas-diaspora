@@ -233,6 +233,7 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
 .gal-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
 .inf-spin{display:inline-block;width:18px;height:18px;border:2.5px solid var(--line);border-top-color:var(--orange);border-radius:50%;animation:infspin .7s linear infinite;vertical-align:middle}
 @keyframes infspin{to{transform:rotate(360deg)}}
+.drop.drag{background:#fff8ec;border-color:var(--orange);color:var(--bleu)}
 </style>
 </head>
 <body>
@@ -1081,14 +1082,15 @@ function renderAdminMedias(){
     var albums=state.albums||[];
     am.innerHTML=albums.slice().reverse().map(function(a){
       var items=(a.items||[]).map(function(it){
-        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px"><span style="font-size:13px">'+(it.type==='youtube'?'▶️ YouTube':it.type==='tiktok'?'🎵 TikTok':'🖼️ Image')+(it.titre?' — '+esc(it.titre):'')+'</span><button class="btn sm warn" onclick="suppItem(\''+a.id+'\',\''+it.id+'\')">🗑️</button></div>';
+        var fn = it.type==='image' ? 'suppImage' : 'suppItem'; var icon = it.type==='youtube'?'▶️ YouTube': it.type==='tiktok'?'🎵 TikTok': '🖼️ Photo'; var apercu = it.type==='image' ? '<img src="'+it.url+'" style="width:36px;height:36px;border-radius:6px;object-fit:cover;margin-right:8px"/>' : ''; return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px"><span style="font-size:13px;display:flex;align-items:center">'+apercu+icon+(it.titre?' — '+esc(it.titre):'')+'</span><button class="btn sm warn" onclick="'+fn+'(\''+a.id+'\',\''+it.id+'\')">🗑️</button></div>';
       }).join('')||'<p class="muted" style="font-size:13px">Album vide.</p>';
       return '<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><strong>'+esc(a.titre)+'</strong><button class="btn sm warn" onclick="suppAlbum(\''+a.id+'\')">Supprimer</button></div>'
         +(a.desc?'<div class="muted" style="font-size:12px">'+esc(a.desc)+'</div>':'')
         +'<div style="margin:10px 0">'+items+'</div>'
         +'<div class="form-row"><div><label>Lien YouTube / TikTok</label><input type="text" id="lien_'+a.id+'" placeholder="https://..."/></div><div><label>Légende (option)</label><input type="text" id="lienT_'+a.id+'"/></div></div>'
         +'<button class="btn sm" onclick="addLien(\''+a.id+'\')">+ Ajouter la vidéo</button>'
-        +'<div class="muted" style="font-size:12px;margin-top:6px">📷 L\'ajout de photos arrive à l\'étape suivante (Firebase Storage).</div></div>';
+        +'<hr class="s"/><div class="drop" ondrop="dropPhotos(event,\''+a.id+'\')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" style="border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted)">📷 Glissez vos photos ici, ou <label style="color:var(--bleu);text-decoration:underline;cursor:pointer">choisissez-les<input type="file" accept="image/*" multiple style="display:none" onchange="uploadPhotosAlbum(\''+a.id+'\', this.files)"/></label></div>'
+        +'<div id="up_wrap_'+a.id+'" style="display:none;margin-top:8px"><div style="background:var(--bg);border-radius:8px;overflow:hidden;height:22px"><div id="up_bar_'+a.id+'" style="background:var(--orange);color:#fff;font-size:12px;line-height:22px;text-align:center;height:100%;width:0%">0%</div></div></div>';
     }).join('')||'<p class="muted">Aucun album. Créez-en un ci-dessus.</p>';
   }
 }
@@ -1250,6 +1252,62 @@ function carteAdherentPDF(num){
     }catch(e){ toast('⚠️ Erreur carte : ' + e.message); }
   });
 }
+
+/* ==================== UPLOAD PHOTOS (Firebase Storage) ==================== */
+function recasStorage(){
+  if(typeof firebase==='undefined' || !firebase.storage){ return null; }
+  try { return firebase.storage(); } catch(e){ return null; }
+}
+function uploadPhotosAlbum(albumId, files){
+  var alb = (state.albums||[]).find(function(a){ return a.id===albumId; });
+  if(!alb){ toast('Album introuvable'); return; }
+  var st = recasStorage();
+  if(!st){ toast('⚠️ Firebase Storage non disponible'); return; }
+  var imgs = Array.prototype.slice.call(files||[]).filter(function(f){ return /^image\//.test(f.type); });
+  if(!imgs.length){ toast('Sélectionnez des images (JPG, PNG, WebP)'); return; }
+
+  var bar = document.getElementById('up_bar_'+albumId);
+  var done = 0, total = imgs.length;
+  function avancer(){ done++; if(bar){ bar.style.width = Math.round(done/total*100)+'%'; bar.textContent = done+' / '+total; } if(done===total){ setTimeout(function(){ var w2=document.getElementById('up_wrap_'+albumId); if(w2) w2.style.display='none'; toast('✓ '+total+' photo(s) envoyée(s)'); save(); renderAll(); }, 400); } }
+  if(bar){ var w=document.getElementById('up_wrap_'+albumId); if(w) w.style.display='block'; bar.style.width='2%'; bar.textContent='0 / '+total; }
+
+  imgs.forEach(function(file){
+    compressImage(file, 1600, function(blob /*, dataUrl */){
+      var id = 'p'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+      var path = 'recas/photos/'+albumId+'/'+id+'.webp';
+      var ref = st.ref(path);
+      var task = ref.put(blob, { contentType:'image/webp' });
+      task.on('state_changed', null, function(err){ toast('⚠️ Erreur envoi : '+(err && err.code||err)); avancer(); }, function(){
+        task.snapshot.ref.getDownloadURL().then(function(url){
+          alb.items = alb.items || [];
+          alb.items.push({ id:id, type:'image', url:url, path:path, titre:'' });
+          avancer();
+        }).catch(function(err){ toast('⚠️ URL : '+(err && err.code||err)); avancer(); });
+      });
+    });
+  });
+}
+function suppImage(albumId, itemId){
+  var alb = (state.albums||[]).find(function(a){ return a.id===albumId; }); if(!alb) return;
+  var it = (alb.items||[]).find(function(x){ return x.id===itemId; });
+  if(!it) return;
+  if(!confirm('Supprimer cette photo ?')) return;
+  if(it.path){
+    var st = recasStorage();
+    if(st){ st.ref(it.path).delete().catch(function(){ /* déjà supprimée, on continue */ }); }
+  }
+  alb.items = alb.items.filter(function(x){ return x.id!==itemId; });
+  save(); toast('Photo supprimée'); renderAll();
+}
+/* Glisser-déposer sur la zone d'upload d'un album */
+function dropPhotos(ev, albumId){
+  ev.preventDefault(); ev.stopPropagation();
+  ev.currentTarget.classList.remove('drag');
+  var dt = ev.dataTransfer; if(!dt) return;
+  uploadPhotosAlbum(albumId, dt.files);
+}
+function dragOver(ev){ ev.preventDefault(); ev.stopPropagation(); ev.currentTarget.classList.add('drag'); }
+function dragLeave(ev){ ev.preventDefault(); ev.stopPropagation(); ev.currentTarget.classList.remove('drag'); }
 
 function renderAll(){
   renderAccueil(); renderAssociation(); renderCotisationPage(); renderMembres();
@@ -1636,6 +1694,7 @@ init();
 <!-- Firebase : synchronisation temps réel multi-appareils -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
 </body>
 </html>
