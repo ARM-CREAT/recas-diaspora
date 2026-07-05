@@ -540,6 +540,7 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
         <button data-adm="apercu" class="active">📊 Aperçu</button>
         <button data-adm="membres">👥 Membres</button>
         <button data-adm="cotis">💛 Cotisations</button>
+        <button data-adm="ajour">✅ Membres à jour</button>
         <button data-adm="caisse">🏦 Caisse & rapatriements</button>
         <button data-adm="annonces">📣 Annonces</button>
         <button data-adm="evt">📅 Événements</button>
@@ -547,6 +548,7 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
         <button data-adm="bureau">🪑 Bureau</button>
         <button data-adm="contenu">🏠 Textes du site</button>
         <button data-adm="param">⚙️ Paramètres</button>
+        <button data-adm="journal">📜 Journal d'activité</button>
         <button data-adm="export">💾 Sauvegarde</button>
       </aside>
       <div class="admin-main">
@@ -607,6 +609,25 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
           </div>
         </div>
 
+        <div class="admin-pane" data-pane="ajour" style="display:none">
+          <div class="card">
+            <div class="row"><h4 style="margin:0">Membres à jour de cotisation</h4><span class="right muted" id="ajourCount"></span></div>
+            <div style="margin-top:8px"><input type="search" id="filAjour" oninput="filAjourChange()" placeholder="🔎 Rechercher (nom, n°, ville…)" style="width:100%"/></div>
+            <p class="muted" style="font-size:12px">Ne montre que les adhérents dont la cotisation est valide, triés par nom.</p>
+            <div style="overflow-x:auto;margin-top:10px"><table class="tbl" id="ajourTable">
+              <thead><tr><th>N°</th><th>Nom &amp; Prénom</th><th>Ville &amp; Province</th><th>Téléphone</th><th>Dernier paiement</th><th>Actions</th></tr></thead><tbody></tbody>
+            </table></div>
+            <hr class="s"/>
+            <h4 style="margin:0 0 6px">Marquer un adhérent comme « à jour »</h4>
+            <p class="muted" style="font-size:12px">Enregistre une cotisation confirmée du montant standard, à la date du jour.</p>
+            <div class="form-row">
+              <div><label>N° d'adhérent</label><input type="text" id="quickNum" list="memNums" autocomplete="off" oninput="quickAuto()" placeholder="RECAS-2026-..."/></div>
+              <div><label>Nom (auto)</label><input type="text" id="quickNom" readonly/></div>
+              <div><label>Montant (€)</label><input type="number" id="quickMont" value="30" min="0" step="1"/></div>
+            </div>
+            <button class="btn" onclick="marquerAjour()" style="margin-top:10px">✓ Marquer comme à jour</button>
+          </div>
+        </div>
         <div class="admin-pane" data-pane="caisse" style="display:none">
           <div class="card">
             <h4>Enregistrer un rapatriement financé</h4>
@@ -698,6 +719,13 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
           </div>
         </div>
 
+        <div class="admin-pane" data-pane="journal" style="display:none">
+          <div class="card">
+            <div class="row"><h4 style="margin:0">Journal d'activité</h4><span class="right"><button class="btn sm alt" onclick="viderJournal()">🗑️ Vider</button></span></div>
+            <p class="muted" style="font-size:12px">Toutes les actions administratives sont enregistrées ici, triées de la plus récente à la plus ancienne.</p>
+            <div id="journalList" style="margin-top:10px"></div>
+          </div>
+        </div>
         <div class="admin-pane" data-pane="param" style="display:none">
           <div class="card" style="margin-bottom:14px"><h4>💾 Sauvegarde et restauration</h4>
             <p class="muted" style="font-size:13px">Téléchargez régulièrement une sauvegarde complète. En cas de problème, restaurez ce fichier pour tout récupérer.</p>
@@ -1408,7 +1436,7 @@ function renderAdmin(){
   document.getElementById('aKpiRetard').textContent=state.membres.length-jour;
   document.getElementById('aKpiSolde').textContent=eur(soldeCaisse());
   // membres
-  const _filM=(val('filMem')||'').toLowerCase().trim(); const _memList=_filM?state.membres.filter(m=>((m.num||'')+' '+(m.prenom||'')+' '+(m.nom||'')+' '+(m.ville||'')+' '+(m.pays||'')+' '+(m.tel||'')).toLowerCase().includes(_filM)):state.membres;
+  const _filM=(val('filMem')||'').toLowerCase().trim(); const _cmp=(a,b)=>((a.nom||'')+' '+(a.prenom||'')).localeCompare((b.nom||'')+' '+(b.prenom||''),'fr',{sensitivity:'base'}); const _memList=(_filM?state.membres.filter(m=>((m.num||'')+' '+(m.prenom||'')+' '+(m.nom||'')+' '+(m.ville||'')+' '+(m.pays||'')+' '+(m.tel||'')).toLowerCase().includes(_filM)):[...state.membres]).sort(_cmp);
   document.querySelector('#aMemTable tbody').innerHTML=(infList('amem',_memList).map(m=>{
     const j=aJour(m.num);
     return `<tr><td><strong>${esc(m.num)}</strong></td><td>${esc((m.prenom||'')+' '+m.nom)}</td><td>${esc(m.ville||'—')}${m.pays?' · '+esc(m.pays):''}</td><td>${esc(m.tel||'—')}</td><td>${fmtDate(m.date)}</td>
@@ -1417,7 +1445,7 @@ function renderAdmin(){
   }).join('')||'<tr><td colspan="7" class="muted center">Aucun membre</td></tr>')+infMore('amem',_memList.length,true,7);
   const dl=document.getElementById('memNums'); if(dl) dl.innerHTML=state.membres.map(m=>`<option value="${esc(m.num)}">${esc((m.prenom||'')+' '+m.nom)}</option>`).join('');
   // cotisations
-  const _filC=(val('filCot')||'').toLowerCase().trim(); let cotL=[...state.cotis].sort((a,b)=>b.date-a.date); if(_filC) cotL=cotL.filter(c=>((c.nom||'')+' '+(c.num||'')+' '+(c.moyen||'')+' '+(c.statut||'')).toLowerCase().includes(_filC));
+  const _filC=(val('filCot')||'').toLowerCase().trim(); let cotL=[...state.cotis].sort((a,b)=>(a.nom||'').localeCompare(b.nom||'','fr',{sensitivity:'base'})||b.date-a.date); if(_filC) cotL=cotL.filter(c=>((c.nom||'')+' '+(c.num||'')+' '+(c.moyen||'')+' '+(c.statut||'')).toLowerCase().includes(_filC));
   document.querySelector('#aCotTable tbody').innerHTML=(infList('acot',cotL).map(c=>`
     <tr><td>${fmtDate(c.date)}</td><td>${esc(c.nom)}${c.num?' · '+esc(c.num):''}</td><td><strong>${eur(c.montant)}</strong></td><td>${esc(c.moyen)}${c.periode?' · '+esc(c.periode):''}</td>
     <td><span class="pill ${c.statut==='Confirmée'?'ok':'wait'}">${esc(c.statut)}</span></td>
@@ -1688,6 +1716,99 @@ function init(){
   renderAll();
   const h=location.hash.slice(1); if(h&&document.getElementById('page-'+h)) go(h);
 }
+/* ==================== VUE 2 : Membres à jour ==================== */
+function filAjourChange(){ infShown.ajour = INF_BATCH; renderAll(); }
+function renderAjour(){
+  var tbody = document.querySelector('#ajourTable tbody'); if(!tbody) return;
+  var fil = (val('filAjour')||'').toLowerCase().trim();
+  var list = (state.membres||[]).filter(function(m){ return typeof aJour==='function' ? aJour(m.num) : false; });
+  if(fil) list = list.filter(function(m){ return ((m.num||'')+' '+(m.prenom||'')+' '+(m.nom||'')+' '+(m.ville||'')+' '+(m.pays||'')+' '+(m.tel||'')).toLowerCase().includes(fil); });
+  list.sort(function(a,b){ return ((a.nom||'')+' '+(a.prenom||'')).localeCompare((b.nom||'')+' '+(b.prenom||''),'fr',{sensitivity:'base'}); });
+  var cnt = document.getElementById('ajourCount'); if(cnt) cnt.textContent = list.length + ' membre(s) à jour';
+  var page = infList('ajour', list);
+  tbody.innerHTML = (page.map(function(m){
+    var lastCotis = (state.cotis||[]).filter(function(c){ return c.num===m.num && c.statut==='Confirmée'; }).sort(function(a,b){ return b.date-a.date; })[0];
+    return '<tr><td><strong>'+esc(m.num)+'</strong></td>'
+      +'<td>'+esc(((m.prenom||'')+' '+(m.nom||'')).trim())+'</td>'
+      +'<td>'+esc(m.ville||'—')+(m.pays?' · '+esc(m.pays):'')+'</td>'
+      +'<td>'+esc(m.tel||'—')+'</td>'
+      +'<td>'+(lastCotis?fmtDate(lastCotis.date)+' · <strong>'+eur(lastCotis.montant)+'</strong>':'—')+'</td>'
+      +'<td><button class="btn sm alt" onclick="carteAdherentPDF(\''+m.num+'\')" title="Carte">🪪</button> '
+      +'<button class="btn sm alt" onclick="editMembre(\''+m.num+'\')">✏️</button></td></tr>';
+  }).join('') || '<tr><td colspan="6" class="muted center">Aucun membre à jour</td></tr>')
+   + infMore('ajour', list.length, true, 6);
+}
+function quickAuto(){
+  var num=(val('quickNum')||'').trim(); var m=(state.membres||[]).find(function(x){return x.num===num;});
+  var e=document.getElementById('quickNom'); if(e) e.value = m ? ((m.prenom||'')+' '+m.nom).trim() : '';
+}
+function marquerAjour(){
+  var num=(val('quickNum')||'').trim(); var m=(state.membres||[]).find(function(x){return x.num===num;});
+  if(!m){ toast('⚠️ Adhérent introuvable : ' + num); return; }
+  var mont = +val('quickMont') || 30;
+  state.cotis = state.cotis || [];
+  state.cotis.push({ id:'c'+Date.now(), date:Date.now(), nom:((m.prenom||'')+' '+m.nom).trim(), num:m.num, montant:mont, moyen:'Manuel', periode:'Année', statut:'Confirmée' });
+  var e1=document.getElementById('quickNum'); if(e1) e1.value=''; var e2=document.getElementById('quickNom'); if(e2) e2.value='';
+  journal('Marqué à jour : ' + m.num + ' — ' + ((m.prenom||'')+' '+m.nom).trim() + ' (' + mont + ' €)');
+  save(); toast('✓ ' + m.num + ' est à jour'); renderAll();
+}
+
+/* ==================== VUE 3 : Journal d'activité ==================== */
+function journal(msg){
+  state.logs = state.logs || [];
+  state.logs.push({ id:'l'+Date.now()+'_'+Math.random().toString(36).slice(2,6), t:Date.now(), msg:String(msg) });
+  if(state.logs.length > 500) state.logs = state.logs.slice(-500); // rolling window
+}
+function viderJournal(){
+  if(!confirm('Vider tout le journal ? Cette action est irréversible.')) return;
+  state.logs = []; save(); toast('Journal vidé'); renderAll();
+}
+function renderJournal(){
+  var el = document.getElementById('journalList'); if(!el) return;
+  var logs = (state.logs||[]).slice().reverse();
+  var page = infList('log', logs);
+  el.innerHTML = (page.map(function(l){
+    var d = new Date(l.t);
+    var quand = d.toLocaleDateString('fr-FR') + ' à ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    return '<div style="display:flex;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:#fff">'
+      +'<div style="font-family:var(--mono);font-size:11px;color:var(--muted);min-width:130px">'+quand+'</div>'
+      +'<div style="flex:1;font-size:13px">'+esc(l.msg)+'</div></div>';
+  }).join('') || '<p class="muted center">Aucune activité enregistrée pour l\'instant.</p>')
+   + infMore('log', logs.length, false);
+}
+
+/* ==================== Journalisation automatique des actions ==================== */
+(function wrapForJournal(){
+  function W(name, describe){
+    var orig = window[name]; if(typeof orig !== 'function') return;
+    window[name] = function(){
+      try { var m = describe.apply(null, arguments); if(m) journal(m); } catch(e){}
+      return orig.apply(this, arguments);
+    };
+  }
+  W('confirmerCotis', function(id){ var c=(state.cotis||[]).find(function(x){return x.id===id;}); return c?'Cotisation confirmée : '+(c.nom||'?')+' — '+eur(c.montant):null; });
+  W('suppCotis',      function(id){ var c=(state.cotis||[]).find(function(x){return x.id===id;}); return c?'Cotisation supprimée : '+(c.nom||'?')+' — '+eur(c.montant):null; });
+  W('suppMembre',     function(num){ var m=(state.membres||[]).find(function(x){return x.num===num;}); return m?'Adhérent supprimé : '+num+' — '+((m.prenom||'')+' '+m.nom).trim():null; });
+  W('sauverMembre',   function(num){ return 'Adhérent modifié : '+num; });
+  W('editCotis',      function(id){ var c=(state.cotis||[]).find(function(x){return x.id===id;}); return c?'Cotisation modifiée : '+(c.nom||'?'):null; });
+  W('publierAnnonce', function(){ return 'Annonce publiée : '+(val('anTitre')||'(sans titre)'); });
+  W('publierEvt',     function(){ return 'Événement publié : '+(val('evTitre')||'(sans titre)'); });
+  W('addAlbum',       function(){ return 'Album créé : '+(val('albTitre')||''); });
+  W('setRadio',       function(){ return 'Radio mise à jour : '+(val('rdType')||''); });
+  W('changerIdentifiants', function(){ return 'Identifiants administrateur modifiés'; });
+})();
+
+/* Brancher les nouveaux rendus dans le cycle admin */
+(function hookRenderAdmin(){
+  var orig = window.renderAdmin;
+  window.renderAdmin = function(){
+    var r = orig ? orig.apply(this, arguments) : undefined;
+    try { renderAjour(); } catch(e){}
+    try { renderJournal(); } catch(e){}
+    return r;
+  };
+})();
+
 init();
 </script>
 <!-- Synchronisation temps réel multi-appareils (optionnel) -->
