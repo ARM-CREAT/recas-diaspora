@@ -269,6 +269,7 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
       <button data-page="transparence">La caisse</button>
       <button data-page="annonces">Annonces</button>
       <button data-page="evenements">Événements</button>
+      <button data-page="espace">👤 Mon espace</button>
       <button data-page="medias">📻 Médias</button>
       <button data-page="contact">Contact</button>
       <button data-page="admin" id="adminBtn">🔐 Admin</button>
@@ -485,6 +486,41 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
   <div id="evt-list" class="grid c2"></div>
 </section>
 
+<!-- SIGNALEMENT -->
+<section class="page" id="page-signalement">
+  <div class="h-section"><h3>Signaler un décès</h3><span class="sub">Le bureau vous rappellera immédiatement</span></div>
+  <div class="card">
+    <p class="muted" style="font-size:14px">Nous sommes à vos côtés. Remplissez ce formulaire : un membre du bureau vous contactera dans les plus brefs délais pour engager la procédure de rapatriement.</p>
+    <div class="form-row">
+      <div><label>Nom du défunt *</label><input type="text" id="sgNom"/></div>
+      <div><label>N° d'adhérent (si connu)</label><input type="text" id="sgNum" placeholder="RECAS-2026-..."/></div>
+    </div>
+    <div class="form-row">
+      <div><label>Votre nom *</label><input type="text" id="sgDecl"/></div>
+      <div><label>Lien avec le défunt</label><input type="text" id="sgLien" placeholder="Frère, épouse, ami…"/></div>
+    </div>
+    <div class="form-row">
+      <div><label>Votre téléphone *</label><input type="tel" id="sgTel"/></div>
+      <div><label>Pays de destination</label><input type="text" id="sgPays" placeholder="Mali, Sénégal…"/></div>
+    </div>
+    <div><label>Informations complémentaires</label><textarea id="sgInfo" rows="3"></textarea></div>
+    <button class="btn" onclick="envoyerSignalement()" style="margin-top:12px">Envoyer le signalement</button>
+  </div>
+</section>
+
+<!-- ESPACE MEMBRE -->
+<section class="page" id="page-espace">
+  <div class="h-section"><h3>Mon espace</h3><span class="sub">Consultez votre situation</span></div>
+  <div class="card" id="espaceLogin">
+    <p class="muted" style="font-size:14px">Saisissez votre numéro d'adhérent pour consulter votre situation, vos cotisations et télécharger votre carte.</p>
+    <div class="form-row">
+      <div><label>N° d'adhérent</label><input type="text" id="espNum" placeholder="RECAS-2026-00001"/></div>
+    </div>
+    <button class="btn" onclick="ouvrirEspace()" style="margin-top:10px">Consulter</button>
+  </div>
+  <div id="espaceContenu"></div>
+</section>
+
 <!-- MÉDIAS -->
 <section class="page" id="page-medias">
   <div class="h-section"><h3>Médias</h3><span class="sub">Radio Diaspora · Galerie</span></div>
@@ -541,6 +577,10 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
         <button data-adm="membres">👥 Membres</button>
         <button data-adm="cotis">💛 Cotisations</button>
         <button data-adm="ajour">✅ Membres à jour</button>
+        <button data-adm="rappels">🔔 Rappels</button>
+        <button data-adm="demandes">🕊️ Demandes</button>
+        <button data-adm="presence">📋 Présences</button>
+        <button data-adm="compta">📒 Comptabilité</button>
         <button data-adm="caisse">🏦 Caisse & rapatriements</button>
         <button data-adm="annonces">📣 Annonces</button>
         <button data-adm="evt">📅 Événements</button>
@@ -626,6 +666,45 @@ hr.s{border:0;border-top:1px solid var(--line);margin:18px 0}
               <div><label>Montant (€)</label><input type="number" id="quickMont" value="30" min="0" step="1"/></div>
             </div>
             <button class="btn" onclick="marquerAjour()" style="margin-top:10px">✓ Marquer comme à jour</button>
+          </div>
+        </div>
+        <div class="admin-pane" data-pane="rappels" style="display:none">
+          <div class="card">
+            <div class="row"><h4 style="margin:0">Rappels de cotisation</h4><span class="right muted" id="rapCount"></span></div>
+            <p class="muted" style="font-size:12px">Membres en retard. Pour chacun : un message prêt à envoyer par WhatsApp, SMS ou e-mail.</p>
+            <div class="form-row" style="margin-top:8px">
+              <div><label>Message de rappel (personnalisable)</label><textarea id="rapMsg" rows="3">Bonjour {prenom}, votre cotisation annuelle RECAS ({num}) n'est pas encore à jour. Merci de la régler dès que possible pour rester couvert. Solidairement, le bureau RECAS.</textarea></div>
+            </div>
+            <p class="muted" style="font-size:11px">Variables : {prenom} {nom} {num} {ville}</p>
+            <div id="rappelsList" style="margin-top:12px"></div>
+          </div>
+        </div>
+        <div class="admin-pane" data-pane="demandes" style="display:none">
+          <div class="card">
+            <div class="row"><h4 style="margin:0">Demandes de rapatriement</h4><span class="right muted" id="demCount"></span></div>
+            <p class="muted" style="font-size:12px">Signalements reçus depuis le site. Traitez-les et convertissez-les en dossier de rapatriement.</p>
+            <div id="demandesList" style="margin-top:10px"></div>
+          </div>
+        </div>
+        <div class="admin-pane" data-pane="presence" style="display:none">
+          <div class="card">
+            <h4>Registre des présences</h4>
+            <p class="muted" style="font-size:12px">Pointez les présents lors d'une assemblée, puis générez la feuille de présence en PDF.</p>
+            <div class="form-row">
+              <div><label>Nom de la réunion</label><input type="text" id="presTitre" placeholder="Assemblée générale 2026"/></div>
+              <div><label>Date</label><input type="date" id="presDate"/></div>
+            </div>
+            <button class="btn" onclick="nouvelleSeance()" style="margin-top:10px">Ouvrir une séance</button>
+            <hr class="s"/>
+            <div id="seancesList"></div>
+          </div>
+        </div>
+        <div class="admin-pane" data-pane="compta" style="display:none">
+          <div class="card">
+            <div class="row"><h4 style="margin:0">Bilan comptable</h4>
+              <span class="right"><select id="comptaAnnee" onchange="renderCompta()" style="width:auto"></select></span></div>
+            <div id="comptaBody" style="margin-top:12px"></div>
+            <button class="btn gold" onclick="bilanPDF()" style="margin-top:12px">📄 Générer le bilan PDF</button>
           </div>
         </div>
         <div class="admin-pane" data-pane="caisse" style="display:none">
@@ -840,7 +919,7 @@ const DEFAULT={
     {id:'b2',nom:"—",fonc:"Trésorier",tel:"",lieu:"Tolède, Espagne"},
     {id:'b3',nom:"—",fonc:"Secrétaire général",tel:"",lieu:"Tolède, Espagne"}
   ],
-  membres:[], cotis:[], rapatriements:[], annonces:[], evt:[], msgs:[], albums:[],
+  membres:[], cotis:[], rapatriements:[], annonces:[], evt:[], msgs:[], albums:[], presences:[], demandes:[],
   auth:{user:'recas', pass:'recas2026'}
 };
 function load(){ try{const r=localStorage.getItem(STORE_KEY); if(r) return JSON.parse(r);}catch(e){} return JSON.parse(JSON.stringify(DEFAULT)); }
@@ -1805,6 +1884,349 @@ function renderJournal(){
     var r = orig ? orig.apply(this, arguments) : undefined;
     try { renderAjour(); } catch(e){}
     try { renderJournal(); } catch(e){}
+    return r;
+  };
+})();
+
+/* ==================== 1. RAPPELS DE COTISATION ==================== */
+function msgRappel(m){
+  var t = (val('rapMsg') || "Bonjour {prenom}, votre cotisation RECAS ({num}) n'est pas à jour.");
+  return t.replace(/\{prenom\}/g, m.prenom||'')
+          .replace(/\{nom\}/g, m.nom||'')
+          .replace(/\{num\}/g, m.num||'')
+          .replace(/\{ville\}/g, m.ville||'');
+}
+function renderRappels(){
+  var el = document.getElementById('rappelsList'); if(!el) return;
+  var retard = (state.membres||[]).filter(function(m){ return !(typeof aJour==='function' && aJour(m.num)); });
+  retard.sort(function(a,b){ return ((a.nom||'')+' '+(a.prenom||'')).localeCompare((b.nom||'')+' '+(b.prenom||''),'fr',{sensitivity:'base'}); });
+  var cnt = document.getElementById('rapCount'); if(cnt) cnt.textContent = retard.length + ' membre(s) en retard';
+  var page = infList('rap2', retard);
+  el.innerHTML = (page.map(function(m){
+    var msg = encodeURIComponent(msgRappel(m));
+    var tel = (m.tel||'').replace(/[^\d+]/g,'');
+    var wa  = tel ? '<a class="btn sm" style="text-decoration:none" href="https://wa.me/'+tel.replace(/^\+/,'')+'?text='+msg+'" target="_blank" rel="noopener">💬 WhatsApp</a>' : '';
+    var sms = tel ? '<a class="btn sm alt" style="text-decoration:none" href="sms:'+tel+'?body='+msg+'">✉️ SMS</a>' : '';
+    var cp  = '<button class="btn sm alt" onclick="copierRappel(\''+m.num+'\')">📋 Copier</button>';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:#fff">'
+      +'<div><strong>'+esc(((m.prenom||'')+' '+(m.nom||'')).trim())+'</strong> <span class="muted" style="font-size:12px">'+esc(m.num)+'</span>'
+      +'<div class="muted" style="font-size:12px">'+esc(m.tel||'pas de téléphone')+(m.ville?' · '+esc(m.ville):'')+'</div></div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+wa+sms+cp+'</div></div>';
+  }).join('') || '<p class="muted center">🎉 Tous les membres sont à jour !</p>')
+   + infMore('rap2', retard.length, false);
+}
+function copierRappel(num){
+  var m=(state.membres||[]).find(function(x){return x.num===num;}); if(!m) return;
+  var txt = msgRappel(m);
+  if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(function(){ toast('📋 Message copié'); }); }
+  else { prompt('Copiez ce message :', txt); }
+}
+
+/* ==================== 2. SIGNALEMENT DE DÉCÈS (public) ==================== */
+function envoyerSignalement(){
+  var nom=(val('sgNom')||'').trim(), decl=(val('sgDecl')||'').trim(), tel=(val('sgTel')||'').trim();
+  if(!nom || !decl || !tel){ toast('⚠️ Nom du défunt, votre nom et votre téléphone sont requis'); return; }
+  state.demandes = state.demandes || [];
+  state.demandes.push({
+    id:'d'+Date.now(), date:Date.now(), statut:'Nouvelle',
+    defunt:nom, num:(val('sgNum')||'').trim(), declarant:decl,
+    lien:(val('sgLien')||'').trim(), tel:tel, pays:(val('sgPays')||'').trim(),
+    info:(val('sgInfo')||'').trim()
+  });
+  ['sgNom','sgNum','sgDecl','sgLien','sgTel','sgPays','sgInfo'].forEach(function(i){ var e=document.getElementById(i); if(e) e.value=''; });
+  save(); renderAll();
+  modal('<h3>🕊️ Signalement transmis</h3><p>Le bureau de RECAS a bien reçu votre message et vous contactera dans les plus brefs délais au <strong>'+esc(tel)+'</strong>.</p><p class="muted" style="font-size:13px">Nos condoléances les plus sincères. Vous n\'êtes pas seul.</p><button class="btn" onclick="fermerModal()">Fermer</button>');
+}
+function renderDemandes(){
+  var el=document.getElementById('demandesList'); if(!el) return;
+  var list=(state.demandes||[]).slice().reverse();
+  var cnt=document.getElementById('demCount'); if(cnt){ var nv=list.filter(function(d){return d.statut==='Nouvelle';}).length; cnt.textContent = nv?(nv+' nouvelle(s)'):'à jour'; }
+  var page=infList('dem', list);
+  el.innerHTML = (page.map(function(d){
+    return '<div style="padding:12px;border:1px solid var(--line);border-left:4px solid '+(d.statut==='Nouvelle'?'var(--rouge)':'var(--vert)')+';border-radius:10px;margin-bottom:8px;background:#fff">'
+      +'<div class="row"><strong>'+esc(d.defunt)+'</strong> <span class="right pill '+(d.statut==='Nouvelle'?'late':'ok')+'">'+esc(d.statut)+'</span></div>'
+      +'<div class="muted" style="font-size:12px;margin:4px 0">'+fmtDate(d.date)+(d.num?' · '+esc(d.num):'')+(d.pays?' · vers '+esc(d.pays):'')+'</div>'
+      +'<div style="font-size:13px">Déclaré par <strong>'+esc(d.declarant)+'</strong>'+(d.lien?' ('+esc(d.lien)+')':'')+' — 📞 <a href="tel:'+esc(d.tel)+'">'+esc(d.tel)+'</a></div>'
+      +(d.info?'<div class="muted" style="font-size:13px;margin-top:6px">'+esc(d.info)+'</div>':'')
+      +'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
+      +(d.statut==='Nouvelle'?'<button class="btn sm" onclick="traiterDemande(\''+d.id+'\')">✓ Marquer traitée</button>':'')
+      +'<button class="btn sm warn" onclick="suppDemande(\''+d.id+'\')">🗑️</button></div></div>';
+  }).join('') || '<p class="muted center">Aucune demande.</p>') + infMore('dem', list.length, false);
+}
+function traiterDemande(id){ var d=(state.demandes||[]).find(function(x){return x.id===id;}); if(!d)return; d.statut='Traitée'; journal('Demande de rapatriement traitée : '+d.defunt); save(); renderAll(); }
+function suppDemande(id){ if(!confirm('Supprimer cette demande ?'))return; state.demandes=(state.demandes||[]).filter(function(x){return x.id!==id;}); save(); renderAll(); }
+
+/* ==================== 3. ESPACE MEMBRE (public) ==================== */
+function ouvrirEspace(){
+  var num=(val('espNum')||'').trim().toUpperCase();
+  var m=(state.membres||[]).find(function(x){ return (x.num||'').toUpperCase()===num; });
+  var el=document.getElementById('espaceContenu'); if(!el) return;
+  if(!m){ el.innerHTML='<div class="card"><p class="muted">Aucun adhérent trouvé avec ce numéro. Vérifiez la saisie ou contactez le bureau.</p></div>'; return; }
+  var j = (typeof aJour==='function') ? aJour(m.num) : false;
+  var mesCotis = (state.cotis||[]).filter(function(c){ return c.num===m.num; }).sort(function(a,b){ return b.date-a.date; });
+  el.innerHTML = '<div class="card" style="margin-top:14px">'
+    +'<div class="member"><div class="avatar">'+initials(m.nom)+'</div>'
+    +'<div><div style="font-family:var(--display);font-weight:600;font-size:20px;color:var(--bleu)">'+esc(((m.prenom||'')+' '+(m.nom||'')).trim())+'</div>'
+    +'<div class="muted">'+esc(m.num)+' · membre depuis '+fmtDate(m.date)+'</div></div></div>'
+    +'<hr class="s"/>'
+    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="pill '+(j?'ok':'late')+'" style="font-size:14px;padding:6px 14px">'+(j?'✓ Cotisation à jour':'⚠️ Cotisation en retard')+'</span>'
+    +'<button class="btn sm gold" onclick="carteAdherentPDF(\''+m.num+'\')">🪪 Ma carte d\'adhérent</button>'
+    +'<button class="btn sm alt" onclick="attestationPDF(\''+m.num+'\')">📄 Mon attestation</button></div>'
+    +'<hr class="s"/><h4 style="margin:0 0 8px">Mes cotisations</h4>'
+    +(mesCotis.length ? '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Date</th><th>Montant</th><th>Moyen</th><th>Statut</th><th></th></tr></thead><tbody>'
+      + mesCotis.map(function(c){ return '<tr><td>'+fmtDate(c.date)+'</td><td><strong>'+eur(c.montant)+'</strong></td><td>'+esc(c.moyen||'')+'</td>'
+        +'<td><span class="pill '+(c.statut==='Confirmée'?'ok':'wait')+'">'+esc(c.statut)+'</span></td>'
+        +'<td>'+(c.statut==='Confirmée'?'<button class="btn sm alt" onclick="recuCotisationPDF(\''+c.id+'\')">📄 Reçu</button>':'')+'</td></tr>'; }).join('')
+      + '</tbody></table></div>'
+      : '<p class="muted">Aucune cotisation enregistrée. <a href="#cotisation" onclick="go(\'cotisation\')">Cotiser maintenant →</a></p>')
+    +'</div>';
+}
+
+/* ==================== 4. ATTESTATION PDF ==================== */
+function attestationPDF(num){
+  var m=(state.membres||[]).find(function(x){return x.num===num;}); if(!m){ toast('Adhérent introuvable'); return; }
+  chargerJsPDF(function(){
+    try{
+      var jsPDF=window.jspdf.jsPDF;
+      var doc=new jsPDF({unit:'mm',format:'a4'});
+      var bleu=[21,54,107], orange=[232,130,30], vert=[27,122,57];
+      var j=(typeof aJour==='function')?aJour(m.num):false;
+      // bandeau
+      doc.setFillColor(bleu[0],bleu[1],bleu[2]); doc.rect(0,0,210,34,'F');
+      try{ doc.addImage(RECAS_LOGO_PDF,'PNG',172,4,26,26); }catch(e){}
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.text('RECAS',16,16);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+      doc.text('Association Africaine et de la Diaspora Residente en Espagne',16,22);
+      doc.text('Province de Tolede · Unite · Entraide · Accompagnement',16,27);
+      doc.setFillColor(orange[0],orange[1],orange[2]); doc.rect(0,34,210,1.5,'F');
+      // titre
+      doc.setTextColor(bleu[0],bleu[1],bleu[2]); doc.setFont('helvetica','bold'); doc.setFontSize(17);
+      doc.text("ATTESTATION D'ADHESION",105,52,{align:'center'});
+      doc.setDrawColor(orange[0],orange[1],orange[2]); doc.setLineWidth(0.8); doc.line(65,55,145,55);
+      // corps
+      doc.setTextColor(40,40,40); doc.setFont('helvetica','normal'); doc.setFontSize(11);
+      var y=72;
+      doc.text("Je soussigne, le President de l'association RECAS, atteste que :",20,y); y+=14;
+      doc.setFont('helvetica','bold'); doc.setFontSize(14);
+      doc.text(((m.prenom||'')+' '+(m.nom||'')).trim(),20,y); y+=10;
+      doc.setFont('helvetica','normal'); doc.setFontSize(11);
+      doc.text("Numero d'adherent : " + (m.num||'—'),20,y); y+=7;
+      doc.text("Domicile : " + (m.ville||'—') + (m.pays?(' · '+m.pays):''),20,y); y+=7;
+      doc.text("Membre depuis le : " + (m.date?new Date(m.date).toLocaleDateString('fr-FR'):'—'),20,y); y+=14;
+      doc.text("est regulierement inscrit(e) en qualite de membre de l'association RECAS,",20,y); y+=7;
+      doc.text("et que sa situation de cotisation est, a ce jour :",20,y); y+=12;
+      // statut
+      var col = j?vert:[207,46,46];
+      doc.setFillColor(col[0],col[1],col[2]); doc.roundedRect(20,y-6,60,11,2,2,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+      doc.text(j?'A JOUR':'EN RETARD',50,y+1.5,{align:'center'});
+      y+=22;
+      doc.setTextColor(40,40,40); doc.setFont('helvetica','normal'); doc.setFontSize(11);
+      doc.text("Cette attestation est delivree a l'interesse(e) pour servir et valoir",20,y); y+=7;
+      doc.text("ce que de droit.",20,y); y+=20;
+      doc.text("Fait a Tolede, le " + new Date().toLocaleDateString('fr-FR'),20,y);
+      // signature
+      doc.setFont('helvetica','bold'); doc.text("Le President",150,y+18,{align:'center'});
+      doc.setDrawColor(150,150,150); doc.setLineWidth(0.3); doc.line(122,y+30,178,y+30);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(120,120,120);
+      doc.text("Signature et cachet",150,y+34,{align:'center'});
+      // pied
+      doc.setDrawColor(vert[0],vert[1],vert[2]); doc.setLineWidth(0.6); doc.line(16,275,194,275);
+      doc.setFontSize(8); doc.setTextColor(120,120,120);
+      doc.text('RECAS — Province de Tolede, Espagne · recas-diaspora.vercel.app',105,281,{align:'center'});
+      doc.save('Attestation-RECAS-'+(m.num||'membre')+'.pdf');
+      toast('📄 Attestation générée');
+    }catch(e){ toast('⚠️ Erreur : '+e.message); }
+  });
+}
+
+/* ==================== 5. REGISTRE DES PRÉSENCES ==================== */
+function nouvelleSeance(){
+  var t=(val('presTitre')||'').trim(); if(!t){ toast("Donnez un nom à la réunion"); return; }
+  var d=val('presDate') || new Date().toISOString().slice(0,10);
+  state.presences = state.presences || [];
+  state.presences.push({ id:'s'+Date.now(), titre:t, date:d, presents:[] });
+  var e=document.getElementById('presTitre'); if(e) e.value='';
+  journal('Séance ouverte : '+t);
+  save(); toast('Séance créée'); renderAll();
+}
+function togglePresent(sid, num){
+  var s=(state.presences||[]).find(function(x){return x.id===sid;}); if(!s) return;
+  s.presents = s.presents || [];
+  var i = s.presents.indexOf(num);
+  if(i>=0) s.presents.splice(i,1); else s.presents.push(num);
+  save(); renderAll();
+}
+function suppSeance(id){ if(!confirm('Supprimer cette séance ?'))return; state.presences=(state.presences||[]).filter(function(x){return x.id!==id;}); save(); renderAll(); }
+function renderPresences(){
+  var el=document.getElementById('seancesList'); if(!el) return;
+  var list=(state.presences||[]).slice().reverse();
+  el.innerHTML = list.map(function(s){
+    var mem=(state.membres||[]).slice().sort(function(a,b){ return ((a.nom||'')+' '+(a.prenom||'')).localeCompare((b.nom||'')+' '+(b.prenom||''),'fr',{sensitivity:'base'}); });
+    var lignes = mem.map(function(m){
+      var ok = (s.presents||[]).indexOf(m.num)>=0;
+      return '<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:'+(ok?'#eaf6ee':'transparent')+';cursor:pointer">'
+        +'<input type="checkbox" '+(ok?'checked':'')+' onchange="togglePresent(\''+s.id+'\',\''+m.num+'\')"/>'
+        +'<span style="font-size:13px">'+esc(((m.prenom||'')+' '+(m.nom||'')).trim())+' <span class="muted">'+esc(m.num)+'</span></span></label>';
+    }).join('');
+    return '<div class="card" style="margin-bottom:12px">'
+      +'<div class="row"><strong>'+esc(s.titre)+'</strong><span class="right">'
+      +'<span class="pill ok">'+(s.presents||[]).length+' / '+mem.length+' présents</span> '
+      +'<button class="btn sm alt" onclick="feuillePresencePDF(\''+s.id+'\')">📄 PDF</button> '
+      +'<button class="btn sm warn" onclick="suppSeance(\''+s.id+'\')">🗑️</button></span></div>'
+      +'<div class="muted" style="font-size:12px;margin-bottom:8px">'+esc(s.date)+'</div>'
+      +'<div style="max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:6px">'+(lignes||'<p class="muted">Aucun membre</p>')+'</div></div>';
+  }).join('') || '<p class="muted center">Aucune séance. Créez-en une ci-dessus.</p>';
+}
+function feuillePresencePDF(sid){
+  var s=(state.presences||[]).find(function(x){return x.id===sid;}); if(!s) return;
+  chargerJsPDF(function(){
+    try{
+      var jsPDF=window.jspdf.jsPDF; var doc=new jsPDF({unit:'mm',format:'a4'});
+      var bleu=[21,54,107], orange=[232,130,30];
+      doc.setFillColor(bleu[0],bleu[1],bleu[2]); doc.rect(0,0,210,26,'F');
+      try{ doc.addImage(RECAS_LOGO_PDF,'PNG',178,2,22,22); }catch(e){}
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('RECAS',14,13);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('Feuille de presence',14,19);
+      doc.setFillColor(orange[0],orange[1],orange[2]); doc.rect(0,26,210,1.2,'F');
+      doc.setTextColor(21,54,107); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+      doc.text(s.titre,14,40);
+      doc.setTextColor(90,90,90); doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      doc.text('Date : '+s.date,14,47);
+      var mem=(state.membres||[]).slice().sort(function(a,b){ return ((a.nom||'')+' '+(a.prenom||'')).localeCompare((b.nom||'')+' '+(b.prenom||''),'fr',{sensitivity:'base'}); });
+      doc.text('Presents : '+(s.presents||[]).length+' / '+mem.length,14,53);
+      var y=64;
+      doc.setFontSize(9); doc.setTextColor(40,40,40); doc.setFont('helvetica','bold');
+      doc.text('N°',14,y); doc.text('Nom et prenom',36,y); doc.text('Present',120,y); doc.text('Signature',150,y);
+      doc.setDrawColor(200,200,200); doc.line(14,y+2,196,y+2); y+=8;
+      doc.setFont('helvetica','normal');
+      mem.forEach(function(m){
+        if(y>272){ doc.addPage(); y=24; }
+        var ok=(s.presents||[]).indexOf(m.num)>=0;
+        doc.text(String(m.num||'').replace('RECAS-',''),14,y);
+        doc.text(((m.prenom||'')+' '+(m.nom||'')).trim().slice(0,40),36,y);
+        doc.text(ok?'X':'',126,y);
+        doc.setDrawColor(220,220,220); doc.line(150,y+1,192,y+1);
+        y+=7.5;
+      });
+      doc.save('Presences-RECAS-'+s.date+'.pdf');
+      toast('📄 Feuille de présence générée');
+    }catch(e){ toast('⚠️ Erreur : '+e.message); }
+  });
+}
+
+/* ==================== 6. COMPTABILITÉ ==================== */
+function comptaAnnees(){
+  var y = {};
+  (state.cotis||[]).forEach(function(c){ y[new Date(c.date).getFullYear()] = 1; });
+  (state.rapatriements||[]).forEach(function(r){ if(r.date) y[new Date(r.date).getFullYear()] = 1; });
+  y[new Date().getFullYear()] = 1;
+  return Object.keys(y).sort(function(a,b){ return b-a; });
+}
+function renderCompta(){
+  var sel=document.getElementById('comptaAnnee'), body=document.getElementById('comptaBody');
+  if(!sel||!body) return;
+  var annees = comptaAnnees();
+  if(sel.options.length !== annees.length){
+    var cur = sel.value;
+    sel.innerHTML = annees.map(function(a){ return '<option value="'+a+'">'+a+'</option>'; }).join('');
+    if(cur && annees.indexOf(cur)>=0) sel.value = cur;
+  }
+  var an = +(sel.value || annees[0]);
+  var cot = (state.cotis||[]).filter(function(c){ return c.statut==='Confirmée' && new Date(c.date).getFullYear()===an; });
+  var rap = (state.rapatriements||[]).filter(function(r){ return r.date && new Date(r.date).getFullYear()===an; });
+  var recettes = cot.reduce(function(s,c){ return s + (+c.montant||0); }, 0);
+  var depenses = rap.reduce(function(s,r){ return s + (+r.cout||0); }, 0);
+  var solde = recettes - depenses;
+  // par moyen de paiement
+  var parMoyen = {};
+  cot.forEach(function(c){ var k=c.moyen||'Autre'; parMoyen[k]=(parMoyen[k]||0)+(+c.montant||0); });
+  body.innerHTML =
+    '<div class="grid c3" style="gap:12px">'
+    +'<div class="stat"><div class="n" style="color:var(--vert)">'+eur(recettes)+'</div><div class="l">Recettes (cotisations)</div></div>'
+    +'<div class="stat"><div class="n" style="color:var(--rouge)">'+eur(depenses)+'</div><div class="l">Dépenses (rapatriements)</div></div>'
+    +'<div class="stat"><div class="n" style="color:'+(solde>=0?'var(--bleu)':'var(--rouge)')+'">'+eur(solde)+'</div><div class="l">Solde de l\'exercice</div></div>'
+    +'</div>'
+    +'<hr class="s"/><h4 style="margin:0 0 8px">Détail des recettes par moyen de paiement</h4>'
+    +'<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Moyen</th><th>Montant</th><th>Part</th></tr></thead><tbody>'
+    + (Object.keys(parMoyen).length ? Object.keys(parMoyen).map(function(k){
+        var pct = recettes ? Math.round(parMoyen[k]/recettes*100) : 0;
+        return '<tr><td>'+esc(k)+'</td><td><strong>'+eur(parMoyen[k])+'</strong></td><td>'+pct+' %</td></tr>';
+      }).join('') : '<tr><td colspan="3" class="muted center">Aucune recette</td></tr>')
+    +'</tbody></table></div>'
+    +'<hr class="s"/><h4 style="margin:0 0 8px">Rapatriements financés ('+rap.length+')</h4>'
+    +(rap.length ? '<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Date</th><th>Nom</th><th>Destination</th><th>Coût</th></tr></thead><tbody>'
+      + rap.map(function(r){ return '<tr><td>'+fmtDate(r.date)+'</td><td>'+esc(r.nom||'—')+'</td><td>'+esc(r.pays||'—')+'</td><td><strong>'+eur(r.cout||0)+'</strong></td></tr>'; }).join('')
+      +'</tbody></table></div>' : '<p class="muted">Aucun rapatriement cette année.</p>')
+    +'<p class="muted" style="font-size:12px;margin-top:10px">'+cot.length+' cotisation(s) confirmée(s) sur l\'exercice '+an+'.</p>';
+}
+function bilanPDF(){
+  var sel=document.getElementById('comptaAnnee'); var an=+(sel && sel.value) || new Date().getFullYear();
+  chargerJsPDF(function(){
+    try{
+      var jsPDF=window.jspdf.jsPDF; var doc=new jsPDF({unit:'mm',format:'a4'});
+      var bleu=[21,54,107], orange=[232,130,30], vert=[27,122,57];
+      var cot=(state.cotis||[]).filter(function(c){ return c.statut==='Confirmée' && new Date(c.date).getFullYear()===an; });
+      var rap=(state.rapatriements||[]).filter(function(r){ return r.date && new Date(r.date).getFullYear()===an; });
+      var recettes=cot.reduce(function(s,c){return s+(+c.montant||0);},0);
+      var depenses=rap.reduce(function(s,r){return s+(+r.cout||0);},0);
+      var solde=recettes-depenses;
+      doc.setFillColor(bleu[0],bleu[1],bleu[2]); doc.rect(0,0,210,30,'F');
+      try{ doc.addImage(RECAS_LOGO_PDF,'PNG',176,3,24,24); }catch(e){}
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.text('RECAS',16,15);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('Bilan financier de l\'exercice '+an,16,22);
+      doc.setFillColor(orange[0],orange[1],orange[2]); doc.rect(0,30,210,1.5,'F');
+      doc.setTextColor(bleu[0],bleu[1],bleu[2]); doc.setFont('helvetica','bold'); doc.setFontSize(15);
+      doc.text('BILAN FINANCIER '+an,105,46,{align:'center'});
+      var y=64;
+      function ligne(lab,val,couleur,gras){
+        doc.setTextColor(60,60,60); doc.setFont('helvetica', gras?'bold':'normal'); doc.setFontSize(11);
+        doc.text(lab,20,y);
+        if(couleur) doc.setTextColor(couleur[0],couleur[1],couleur[2]);
+        doc.setFont('helvetica','bold'); doc.text(String(val)+' EUR',180,y,{align:'right'});
+        doc.setDrawColor(225,220,205); doc.line(20,y+2.5,190,y+2.5);
+        y+=11;
+      }
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(bleu[0],bleu[1],bleu[2]);
+      doc.text('RECETTES',20,y); y+=9;
+      ligne('Cotisations confirmees ('+cot.length+')', recettes, vert);
+      y+=6;
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(bleu[0],bleu[1],bleu[2]);
+      doc.text('DEPENSES',20,y); y+=9;
+      ligne('Rapatriements finances ('+rap.length+')', depenses, [207,46,46]);
+      y+=10;
+      doc.setFillColor(244,240,230); doc.roundedRect(18,y-7,174,14,2,2,'F');
+      ligne('SOLDE DE L\'EXERCICE', solde, solde>=0?vert:[207,46,46], true);
+      y+=10;
+      if(rap.length){
+        doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(bleu[0],bleu[1],bleu[2]);
+        doc.text('Detail des rapatriements',20,y); y+=8;
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(60,60,60);
+        rap.forEach(function(r){
+          if(y>265){ doc.addPage(); y=24; }
+          doc.text(new Date(r.date).toLocaleDateString('fr-FR')+'  ·  '+(r.nom||'—')+'  ·  '+(r.pays||'—'),20,y);
+          doc.text((+r.cout||0)+' EUR',180,y,{align:'right'});
+          y+=6.5;
+        });
+      }
+      doc.setDrawColor(vert[0],vert[1],vert[2]); doc.setLineWidth(0.6); doc.line(16,275,194,275);
+      doc.setFontSize(8); doc.setTextColor(120,120,120);
+      doc.text('Document genere le '+new Date().toLocaleDateString('fr-FR')+' · RECAS, Province de Tolede',105,281,{align:'center'});
+      doc.save('Bilan-RECAS-'+an+'.pdf');
+      toast('📄 Bilan généré');
+    }catch(e){ toast('⚠️ Erreur : '+e.message); }
+  });
+}
+
+/* Brancher tous les nouveaux rendus */
+(function hookNouveaux(){
+  var orig = window.renderAdmin;
+  window.renderAdmin = function(){
+    var r = orig ? orig.apply(this, arguments) : undefined;
+    try{ renderRappels(); }catch(e){}
+    try{ renderDemandes(); }catch(e){}
+    try{ renderPresences(); }catch(e){}
+    try{ renderCompta(); }catch(e){}
     return r;
   };
 })();
