@@ -18,8 +18,10 @@ var RECAS_FIREBASE_CONFIG = {
 };
 
 (function () {
-  /* Bandeau de statut bien visible en haut de l'écran (diagnostic) */
+  /* Bandeau discret : ne s'affiche qu'en cas de PROBLÈME de connexion.
+     Quand tout va bien, aucun message n'apparaît à l'écran (juste dans la console). */
 function showStatus(text, ok){
+  if (ok) return;   // rien à l'écran quand la synchro fonctionne
   var el = document.getElementById("recas-fb-status");
   if (!el) {
     el = document.createElement("div");
@@ -29,12 +31,16 @@ function showStatus(text, ok){
     (document.body || document.documentElement).appendChild(el);
   }
   el.style.display = "block";
-  el.style.background = ok ? "#1b7a39" : "#cf2e2e";
-  el.textContent = (ok ? "✅ " : "⚠️ ") + text + "  ·  (toucher pour masquer)";
+  el.style.background = "#cf2e2e";
+  el.textContent = "⚠️ " + text + "  ·  (toucher pour masquer)";
 }
 function notify(m){
-  try { if (typeof window.toast === "function") window.toast(m); } catch(e){}
-  showStatus(m.replace(/^[✅⚠️]\s*/, ""), m.indexOf("✅") === 0 || /connect/i.test(m));
+  // plus de toast ni de bandeau pour les messages de succès — uniquement la console
+  var estErreur = m.indexOf("⚠️") === 0;
+  if (estErreur) {
+    try { if (typeof window.toast === "function") window.toast(m); } catch(e){}
+    showStatus(m.replace(/^[✅⚠️]\s*/, ""), false);
+  }
   console.log("RECAS:", m);
 }
   window.RECAS_FB_STATUS = "init";
