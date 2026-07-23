@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://recas-diaspora.vercel.app/</loc><lastmod>2026-06-28</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://recas-diaspora.vercel.app/#association</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://recas-diaspora.vercel.app/#mission</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://recas-diaspora.vercel.app/#adhesion</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://recas-diaspora.vercel.app/#cotisation</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://recas-diaspora.vercel.app/#procedure</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://recas-diaspora.vercel.app/#transparence</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://recas-diaspora.vercel.app/#annonces</loc><lastmod>2026-06-28</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://recas-diaspora.vercel.app/#evenements</loc><lastmod>2026-06-28</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://recas-diaspora.vercel.app/#contact</loc><lastmod>2026-06-28</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://recas-diaspora.vercel.app/</loc><lastmod>2026-07-23</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://recas-diaspora.vercel.app/#association</loc><lastmod>2026-07-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://recas-diaspora.vercel.app/#mission</loc><lastmod>2026-07-23</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://recas-diaspora.vercel.app/#adhesion</loc><lastmod>2026-07-23</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://recas-diaspora.vercel.app/#cotisation</loc><lastmod>2026-07-23</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://recas-diaspora.vercel.app/#procedure</loc><lastmod>2026-07-23</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://recas-diaspora.vercel.app/#transparence</loc><lastmod>2026-07-23</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://recas-diaspora.vercel.app/#annonces</loc><lastmod>2026-07-23</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://recas-diaspora.vercel.app/#evenements</loc><lastmod>2026-07-23</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://recas-diaspora.vercel.app/#contact</loc><lastmod>2026-07-23</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
 </urlset>
